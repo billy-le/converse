@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <link rel="stylesheet" href="style.css" />
+  <head>
+    <title>Web RTC</title>
+  </head>
+  <script>
+    const ROOM_ID = "{{roomId}}";
+  </script>
+    <script src="/index.js" type="module"></script>
+  <body>
+    <div class="container">
+      <div class="wrap">
+        <aside class="chatroom">
+          <ul id="messages"></ul>
+          <form id="form">
+            <input id="message" name="message" autocomplete="off" />
+            <button type="submit">Send</button>
+          </form>
+        </aside>
+      </div>
+      <main class="main">
+        <video id="local-stream"  muted></video>
+      </main>
+    </div>
+  </body>
+</html>

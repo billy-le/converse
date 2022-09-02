@@ -1,0 +1,76 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+.main {
+  background-color: black;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+video {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.container {
+  display: flex;
+  height: 100%;
+}
+
+.wrap {
+  width: min-content;
+  position: relative;
+  max-width: 50%;
+}
+
+.chatroom {
+  position: relative;
+  height: 100%;
+  min-width: 320px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  resize: horizontal;
+  max-width: 100%;
+}
+
+.chatroom ul {
+  flex-grow: 1;
+  list-style: none;
+}
+
+#form {
+  display: flex;
+}
+
+#messages {
+  padding: 4px 8px;
+}
+
+#message {
+  width: 100%;
+  min-height: 40px;
+  padding: 2px 4px;
+  font-size: 1.15rem;
+}
+
+button[type="submit"] {
+  min-height: 40px;
+  background-color: cornflowerblue;
+  color: white;
+  padding: 4px 12px;
+  font-size: 1.25rem;
+  outline: none;
+  border: none;
+}
