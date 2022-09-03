@@ -27,8 +27,8 @@ app.get("/:roomId", (req, res) => {
 });
 
 io.on("connection", (socket) => {
-  socket.on("chat-message", (msg) => {
-    io.emit("chat-message", msg);
+  socket.on("chat-message", (roomId, msg) => {
+    io.in(roomId).emit('chat-message', msg)
   });
 
   socket.on("join-room", (roomId, userId) => {
@@ -40,6 +40,15 @@ io.on("connection", (socket) => {
     socket.broadcast.to(roomId).emit("user-disconnected", userId);
     socket.leave(roomId)
   });
+
+  socket.on('call', (roomId, offer) => {
+    console.log('called?')
+    socket.broadcast.to(roomId).emit('call', offer)
+  })
+
+  socket.on('answer', (roomId, answer) => {
+    socket.broadcast.to(roomId).emit('answer', answer)
+  })
 });
 
 server.listen(PORT, () => {
