@@ -4,9 +4,9 @@ function addVideoStream(selector, stream) {
   const video = document.querySelector(selector);
   if (video) {
     video.srcObject = stream;
-    video.onloadedmetadata = () => {
+    video.addEventListener("loadedmetadata", () => {
       video.play();
-    };
+    });
   }
 }
 
@@ -57,7 +57,7 @@ if (window?.navigator?.mediaDevices) {
           if (kind === track.kind) {
             track.stop();
           } else {
-            otherSelectedDevices.push([track.kind, { deviceId: track.id } ]);
+            otherSelectedDevices.push([track.kind, { deviceId: track.id }]);
           }
         });
 
@@ -65,7 +65,7 @@ if (window?.navigator?.mediaDevices) {
           [kind]: {
             deviceId,
           },
-          ...Object.fromEntries(otherSelectedDevices)
+          ...Object.fromEntries(otherSelectedDevices),
         };
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);

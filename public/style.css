@@ -84,3 +84,11 @@ button[type="submit"] {
   outline: none;
   border: none;
 }
+
+#remote-stream {
+  position: absolute;
+  height: 180px;
+  width: 340px;
+  top: 0;
+  left: 0;
+}
