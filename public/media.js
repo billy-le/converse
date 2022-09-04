@@ -4,11 +4,13 @@ function addVideoStream(selector, stream) {
   const video = document.querySelector(selector);
   if (video) {
     video.srcObject = stream;
-    video.play();
+    video.onloadedmetadata = () => {
+      video.play();
+    };
   }
 }
 
-if ("navigator" in window && "mediaDevices" in window.navigator) {
+if (window?.navigator?.mediaDevices) {
   let mediaDevicesMap;
 
   const getMediaDevices = async () => {
@@ -50,19 +52,20 @@ if ("navigator" in window && "mediaDevices" in window.navigator) {
       devicesList.addEventListener("change", async (event) => {
         const deviceId = event.target.value;
         const kind = event.target.options[event.target.options.selectedIndex].dataset.kind;
+        const otherSelectedDevices = [];
         stream.getTracks().forEach((track) => {
           if (kind === track.kind) {
             track.stop();
+          } else {
+            otherSelectedDevices.push([track.kind, { deviceId: track.id } ]);
           }
         });
 
         const constraints = {
           [kind]: {
-            deviceId: {
-              exact: deviceId,
-            },
+            deviceId,
           },
-          [kind === "video" ? "audio" : "video"]: true,
+          ...Object.fromEntries(otherSelectedDevices)
         };
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
