@@ -52,7 +52,9 @@ io.on("connection", (socket) => {
         break;
       case "leave-room":
         socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, data);
-        socket.leave(roomId);
+        if(data.disconnect) {
+          socket.leave(roomId)
+        }
         break;
       case "offer-sdp":
       case "answer-sdp":
@@ -69,7 +71,7 @@ io.on("connection", (socket) => {
     if (connectedSockets[socket.id]) {
       const { roomId, userId } = connectedSockets[socket.id];
       if (roomId && userId) {
-        socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, { type: "leave-room", roomId, userId });
+        socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, { type: "leave-room", roomId, userId, disconnect: true });
         delete connectedSockets[socket.id];
       }
     }

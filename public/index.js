@@ -19,33 +19,57 @@ const remoteStreamVideo = document.querySelector("#remote-stream");
 const buttonMic = document.querySelector("#mic");
 const buttonCamera = document.querySelector("#camera");
 const buttonHangup = document.querySelector("#hangup");
+const buttonCopyLink = document.querySelector("#copy-link");
 
 if (buttonMic) {
-  buttonMic.addEventListener("click", () => {
+  buttonMic.addEventListener("pointerdown", () => {
     buttonMic.classList.toggle("active");
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = !track.enabled;
+    });
   });
 }
 
 if (buttonCamera) {
-  buttonCamera.addEventListener("click", () => {
+  buttonCamera.addEventListener("pointerdown", () => {
     buttonCamera.classList.toggle("active");
+    stream.getVideoTracks().forEach((track) => {
+      track.enabled = !track.enabled;
+    });
   });
 }
 
 if (buttonHangup) {
-  buttonHangup.addEventListener("click", () => {
+  buttonHangup.addEventListener("pointerdown", () => {
     buttonHangup.classList.add("active");
     buttonHangup.setAttribute("disabled", "true");
+    if (remoteStreamVideo) {
+      remoteStreamVideo.classList.remove("active");
+      remoteStreamVideo.srcObject = null;
+    }
+    if (localStreamVideo) {
+      localStreamVideo.classList.remove("active");
+    }
+    socket.emit(SOCKET_MESSAGE, { type: "leave-room", roomId: ROOM_ID, userId: USER_ID });
+    peerConnection.close();
+  });
+}
+
+if (buttonCopyLink) {
+  buttonCopyLink.addEventListener("pointerdown", async () => {
+    if (window.navigator?.clipboard) {
+      await window.navigator.clipboard.writeText(window.location.href);
+    }
   });
 }
 
 if (remoteStreamVideo) {
   remoteStreamVideo.addEventListener("loadedmetadata", () => {
     remoteStreamVideo.play();
-    remoteStreamVideo.classList.toggle("active");
+    remoteStreamVideo.classList.add("active");
 
     if (localStreamVideo) {
-      localStreamVideo.classList.toggle("active");
+      localStreamVideo.classList.add("active");
     }
   });
 }
@@ -64,16 +88,6 @@ function createMessage({ msg, userId }) {
 
   if (userId) {
     const isCurrentUser = userId === USER_ID;
-    const avatar = document.createElement("div");
-    avatar.classList.add("avatar");
-
-    if (isCurrentUser) {
-      avatar.classList.add("current-user");
-      avatar.textContent = "Me";
-    } else {
-      avatar.classList.add("user");
-      avatar.textContent = toHTML(userId);
-    }
 
     const messageContainer = document.createElement("div");
     messageContainer.classList.add("message-container");
@@ -89,6 +103,18 @@ function createMessage({ msg, userId }) {
 
     messageContainer.append(date, message);
 
+    const avatar = document.createElement("div");
+    avatar.classList.add("avatar");
+
+    if (isCurrentUser) {
+      chatMessageContainer.classList.add("reverse");
+      avatar.classList.add("current-user");
+      avatar.textContent = "Me";
+    } else {
+      avatar.classList.add("user");
+      avatar.textContent = toHTML(userId);
+    }
+
     chatMessageContainer.append(avatar, messageContainer);
   } else {
     const systemMessage = document.createElement("p");
@@ -102,7 +128,7 @@ function createMessage({ msg, userId }) {
 
   if (messages) {
     messages.appendChild(li);
-    messages.scrollTo({top: messages.scrollHeight, behavior: 'smooth'})
+    messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
   }
 }
 
@@ -122,6 +148,13 @@ const createPeerConnection = () => {
   }
 
   const remoteStream = new MediaStream();
+
+  peerConnection.addEventListener("connectionstatechange", () => {
+    if (peerConnection.connectionState === "connected" && buttonHangup) {
+      buttonHangup.removeAttribute("disabled");
+      buttonHangup.classList.remove("active");
+    }
+  });
 
   peerConnection.addEventListener("track", (event) => {
     event.streams[0].getTracks().forEach((track) => {
@@ -178,10 +211,15 @@ socket.on(SOCKET_MESSAGE, async (data) => {
       case "leave-room":
         createMessage({ msg: `User ${data.userId} has left.` });
         if (remoteStreamVideo) {
-          remoteStreamVideo.classList.toggle("active");
+          remoteStreamVideo.classList.remove("active");
+          remoteStreamVideo.srcObject = null;
         }
         if (localStreamVideo) {
-          localStreamVideo.classList.toggle("active");
+          localStreamVideo.classList.remove("active");
+        }
+        if (buttonHangup) {
+          buttonHangup.setAttribute("disabled", "true");
+          buttonHangup.classList.add("active");
         }
         peerConnection.close();
         break;

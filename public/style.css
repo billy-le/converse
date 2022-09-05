@@ -5,6 +5,9 @@
   --dark-blue: #333652;
   --red: #f83c31;
   --ebony: #111f29;
+
+  --form-height: 5rem;
+  --message-height: 2rem;
 }
 
 * {
@@ -76,13 +79,32 @@ video {
 }
 
 #form {
+  padding: 2px 0 0;
+  background-color: var(--dark-blue);
+  height: var(--form-height);
+}
+
+#input-field {
   display: flex;
+}
+
+#copy-link {
+  border: none;
+  padding: 2px 4px;
+  background-color: var(--pewter);
+  color: var(--ebony);
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+#copy-link:active {
+  background-color: var(--blue-gray);
 }
 
 #messages {
   padding: 4px 8px;
   overflow-y: auto;
-  height: calc(100vh - 2rem);
+  height: calc(100vh - var(--form-height));
 }
 
 #messages > :not(:last-child) {
@@ -91,14 +113,14 @@ video {
 
 #message {
   width: 100%;
-  height: 2rem;
+  height: var(--message-height);
   padding: 2px 4px;
   font-size: .75rem;
   color: var(--dark-blue);
 }
 
 #send {
-  height: 2rem;
+  height: var(--message-height);
   background-color: var(--pewter);
   color: var(--dark-blue);
   padding: 4px 12px;
@@ -180,8 +202,16 @@ video {
   padding: 0 4px;
 }
 
-.chat-message > :first-child {
+.chat-message > :first-child:not(.current-user) {
   margin-right: 8px;
+}
+
+.chat-message > :first-child:is(.current-user) {
+  margin-left: 8px;
+}
+
+.chat-message.reverse {
+  flex-direction: row-reverse;
 }
 
 .system-message {
@@ -194,23 +224,22 @@ video {
   background-color: var(--dark-blue);
   height: max-content;
   border-radius: 4px;
-  padding: 2px 3px;
-  width: 50px;
-
+  padding: 2px 4px;
 }
 
 .current-user {
   color: var(--red);
+  text-align: right;
 }
 
 .user {
-  color: var(--yellow);
+  color: var(--blue-gray);
 }
 
 .message-container {
   background-color: var(--pewter);
   border-radius: 4px;
-  padding: 2px 3px;
+  padding: 2px 4px;
   width: 100%;
 }
 
@@ -222,5 +251,5 @@ video {
 .date {
   color: var(--dark-blue);
   text-align: right;
-  font-size: .5rem;
+  font-size: .75rem;
 }
