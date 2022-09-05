@@ -66,10 +66,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    const { roomId, userId } = connectedSockets[socket.id];
-    if (roomId && userId) {
-      socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, { type: "leave-room", roomId, userId });
-      delete connectedSockets[socket.id];
+    if (connectedSockets[socket.id]) {
+      const { roomId, userId } = connectedSockets[socket.id];
+      if (roomId && userId) {
+        socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, { type: "leave-room", roomId, userId });
+        delete connectedSockets[socket.id];
+      }
     }
   });
 });
