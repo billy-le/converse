@@ -50,21 +50,59 @@ if (remoteStreamVideo) {
   });
 }
 
-function createMessage(message) {
-  const li = document.createElement("li");
-  const dateSpan = document.createElement("span");
-  dateSpan.style.marginRight = "4px";
-  const messageSpan = document.createElement("span");
-  const currentTime = dateFnsFormat(new Date(), "hh:mm a");
+function toHTML(element) {
   const toHTML = document.createElement("span");
-  toHTML.innerHTML = message;
+  toHTML.innerHTML = element;
+  return toHTML.textContent;
+}
 
-  dateSpan.textContent = currentTime + ":";
-  messageSpan.textContent = toHTML.textContent;
-  li.appendChild(dateSpan);
-  li.appendChild(messageSpan);
+function createMessage({ msg, userId }) {
+  const li = document.createElement("li");
+
+  const chatMessageContainer = document.createElement("div");
+  chatMessageContainer.classList.add("chat-message");
+
+  if (userId) {
+    const isCurrentUser = userId === USER_ID;
+    const avatar = document.createElement("div");
+    avatar.classList.add("avatar");
+
+    if (isCurrentUser) {
+      avatar.classList.add("current-user");
+      avatar.textContent = "Me";
+    } else {
+      avatar.classList.add("user");
+      avatar.textContent = toHTML(userId);
+    }
+
+    const messageContainer = document.createElement("div");
+    messageContainer.classList.add("message-container");
+    const message = document.createElement("p");
+    message.classList.add("message");
+    message.textContent = toHTML(msg);
+
+    const date = document.createElement("div");
+    date.classList.add("date");
+
+    const currentTime = dateFnsFormat(new Date(), "hh:mm a");
+    date.append(currentTime);
+
+    messageContainer.append(date, message);
+
+    chatMessageContainer.append(avatar, messageContainer);
+  } else {
+    const systemMessage = document.createElement("p");
+    systemMessage.classList.add("system-message");
+    systemMessage.textContent = toHTML(msg);
+
+    chatMessageContainer.append(systemMessage);
+  }
+
+  li.appendChild(chatMessageContainer);
+
   if (messages) {
     messages.appendChild(li);
+    messages.scrollTo({top: messages.scrollHeight, behavior: 'smooth'})
   }
 }
 
@@ -130,15 +168,15 @@ socket.on(SOCKET_MESSAGE, async (data) => {
     const { type } = data;
     switch (type) {
       case "chat-message":
-        createMessage(data.msg);
+        createMessage(data);
         break;
       case "join-room":
-        createMessage(`User ${data.userId} has joined.`);
+        createMessage({ msg: `User ${data.userId} has joined.` });
         await createPeerConnection();
         await createOffer();
         break;
       case "leave-room":
-        createMessage(`User ${data.userId} has left.`);
+        createMessage({ msg: `User ${data.userId} has left.` });
         if (remoteStreamVideo) {
           remoteStreamVideo.classList.toggle("active");
         }
@@ -168,7 +206,7 @@ if (form) {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (message?.value) {
-      socket.emit(SOCKET_MESSAGE, { type: "chat-message", roomId: ROOM_ID, msg: message.value });
+      socket.emit(SOCKET_MESSAGE, { type: "chat-message", roomId: ROOM_ID, userId: USER_ID, msg: message.value });
       message.value = "";
     }
   });
