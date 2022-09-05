@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://kit.fontawesome.com/536e9f73a2.js" crossorigin="anonymous" defer></script>
   <head>
     <title>Web RTC</title>
   </head>
@@ -23,6 +24,19 @@
         <video id="local-stream" playsinline muted></video>
         <video id="remote-stream" playsinline ></video>
         <div id="media-devices"></div>
+        <div id="controls">
+            <button id="mic">
+              <i class="fa-solid fa-microphone-lines"></i>
+               <i class="fa-solid fa-microphone-lines-slash"></i>
+            </button>
+            <button id="camera">
+              <i class="fa-solid fa-video"></i>
+              <i class="fa-solid fa-video-slash"></i>
+            </button>
+            <button id="hangup">
+              <i class="fa-solid fa-phone-slash"></i>
+            </button>
+        </div>
       </main>
     </div>
   </body>

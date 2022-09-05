@@ -28,10 +28,20 @@ app.get("/:roomId", (req, res) => {
 });
 
 const SOCKET_MESSAGE = "message";
+const connectedSockets = {};
 
 io.on("connection", (socket) => {
+  if (!connectedSockets[socket.id]) {
+    connectedSockets[socket.id] = {};
+  }
   socket.on(SOCKET_MESSAGE, (data) => {
     const { type, roomId } = data;
+    if (connectedSockets[socket.id] && data.userId) {
+      connectedSockets[socket.id] = {
+        userId: data.userId,
+        roomId: data.roomId,
+      };
+    }
     switch (type) {
       case "chat-message":
         io.in(roomId).emit(SOCKET_MESSAGE, data);
@@ -50,8 +60,16 @@ io.on("connection", (socket) => {
         socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, data);
         break;
       default:
-        console.log(type, data)
+        console.log(type, data);
         break;
+    }
+  });
+
+  socket.on("disconnect", () => {
+    const { roomId, userId } = connectedSockets[socket.id];
+    if (roomId && userId) {
+      socket.broadcast.to(roomId).emit(SOCKET_MESSAGE, { type: "leave-room", roomId, userId });
+      delete connectedSockets[socket.id];
     }
   });
 });

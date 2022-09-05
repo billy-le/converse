@@ -19,11 +19,13 @@ body {
 
 #media-devices {
   position: absolute;
-  bottom: 2rem;
-  left: 2rem;
-  background-color: coral;
+  bottom: 1rem;
+  left: 1rem;
+  background-color: cornflowerblue;
   color: white;
   padding: 4px;
+  border-radius: 4px;
+  font-size: .5rem;
 }
 
 video {
@@ -70,25 +72,87 @@ video {
 
 #message {
   width: 100%;
-  min-height: 40px;
+  height: 2rem;
   padding: 2px 4px;
   font-size: 1.15rem;
 }
 
 button[type="submit"] {
-  min-height: 40px;
+  height: 2rem;
   background-color: cornflowerblue;
   color: white;
   padding: 4px 12px;
-  font-size: 1.25rem;
-  outline: none;
   border: none;
 }
 
-#remote-stream {
+#local-stream {
+  transition: all .5s ease;
+}
+
+#local-stream.active {
   position: absolute;
-  height: 180px;
-  width: 340px;
+  height: 150px;
+  width: 200px;
+  top: 1rem;
+  left: 1rem;
+  border-radius: 8px;
+}
+
+#remote-stream {
+  height: 0px;
+  width: 0x;
   top: 0;
   left: 0;
+  transition: all 1s ease;
+}
+
+#remote-stream.active {
+  height: 100%;
+  width: 100%;
+}
+
+#controls {
+  position: absolute;
+  bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+
+}
+
+#controls button:not(:last-of-type) {
+  margin-right: 2rem;
+}
+
+#controls button {
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  border: none;
+  background-color: cornflowerblue;
+  color: white;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 8px rgba(0,0,0, .4);
+}
+
+#controls button.active {
+  background-color: coral;
+}
+
+#controls button > :is(.fa-microphone-lines-slash, .fa-video-slash) {
+  display: none;
+}
+
+#controls button.active > :is(.fa-microphone-lines-slash, .fa-video-slash) {
+  display: block;
+}
+
+#controls button.active > :is(.fa-microphone-lines, .fa-video) {
+  display: none;
+}
+
+#controls button:disabled {
+  opacity: .5;
 }
