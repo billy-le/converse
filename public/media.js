@@ -1,5 +1,23 @@
 let stream;
 
+const mediaConstraints = {
+  video: {
+    height: {
+      min: 480,
+      ideal: 1080,
+      max: 1080,
+    },
+    width: {
+      min: 640,
+      ideal: 1920,
+      max: 1920,
+    },
+  },
+  audio: {
+
+  }
+};
+
 function addVideoStream(selector, stream) {
   const video = document.querySelector(selector);
   if (video) {
@@ -62,7 +80,9 @@ if (window?.navigator?.mediaDevices) {
         });
 
         const constraints = {
+          ...mediaConstraints,
           [kind]: {
+            ...mediaConstraints[kind],
             deviceId,
           },
           ...Object.fromEntries(otherSelectedDevices),
@@ -84,7 +104,7 @@ if (window?.navigator?.mediaDevices) {
     getMediaDevices();
   });
 
-  stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  stream = await navigator.mediaDevices.getUserMedia({...mediaConstraints, audio: true});
   getMediaDevices();
 
   if (stream) {

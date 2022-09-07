@@ -1,29 +1,5 @@
-:root {
-  --blue-gray: #90adc6;
-  --pewter: #e9eaec;
-  --yellow: #fad02c;
-  --dark-blue: #333652;
-  --red: #f83c31;
-  --ebony: #111f29;
-
-  --form-height: 5rem;
-  --message-height: 2rem;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-html,
-body {
-  height: 100%;
-}
+@import 'reset.css';
+@import 'global.css';
 
 #streams {
   background-color: var(--ebony);
@@ -41,7 +17,20 @@ body {
   color: var(--pewter);
   padding: 4px;
   border-radius: 4px;
-  font-size: .5rem;
+  font-size: 0.5rem;
+}
+
+#media-devices > :not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+#media-devices h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
+#media-devices select {
+  font-size: 0.5rem;
 }
 
 video {
@@ -115,7 +104,7 @@ video {
   width: 100%;
   height: var(--message-height);
   padding: 2px 4px;
-  font-size: .75rem;
+  font-size: 0.75rem;
   color: var(--dark-blue);
 }
 
@@ -128,13 +117,13 @@ video {
 }
 
 #local-stream {
-  transition: all .5s ease;
+  transition: all 0.5s ease;
 }
 
 #local-stream.active {
   position: absolute;
-  height: 150px;
-  width: 200px;
+  height: 135px;
+  width: 240px;
   top: 1rem;
   left: 1rem;
   border-radius: 8px;
@@ -160,7 +149,6 @@ video {
   justify-content: center;
   align-items: center;
   width: 100%;
-
 }
 
 #controls button:not(:last-of-type) {
@@ -176,7 +164,7 @@ video {
   color: var(--pewter);
   display: grid;
   place-items: center;
-  box-shadow: 0 4px 8px rgba(0,0,0, .4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 #controls button.active {
@@ -193,7 +181,7 @@ video {
 }
 
 #controls button:disabled {
-  opacity: .5;
+  opacity: 0.5;
 }
 
 .chat-message {
@@ -216,7 +204,7 @@ video {
 
 .system-message {
   color: var(--dark-blue);
-  font-size: .75rem;
+  font-size: 0.75rem;
   word-break: break-word;
 }
 
@@ -251,5 +239,5 @@ video {
 .date {
   color: var(--dark-blue);
   text-align: right;
-  font-size: .75rem;
+  font-size: 0.75rem;
 }

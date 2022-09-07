@@ -7,19 +7,31 @@ import dateFnsFormat from "https://cdn.jsdelivr.net/npm/date-fns@2.29.2/esm/form
 const socket = io();
 
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
-const SOCKET_MESSAGE = "message";
+const ROOM_MESSAGE = "room";
 
 let peerConnection = null;
 
-const form = document.querySelector("#form");
-const message = document.querySelector("#message");
-const messages = document.querySelector("#messages");
-const localStreamVideo = document.querySelector("#local-stream");
-const remoteStreamVideo = document.querySelector("#remote-stream");
-const buttonMic = document.querySelector("#mic");
-const buttonCamera = document.querySelector("#camera");
-const buttonHangup = document.querySelector("#hangup");
-const buttonCopyLink = document.querySelector("#copy-link");
+const [
+  form,
+  message,
+  messages,
+  localStreamVideo,
+  remoteStreamVideo,
+  buttonMic,
+  buttonCamera,
+  buttonHangup,
+  buttonCopyLink,
+] = [
+  "form",
+  "message",
+  "messages",
+  "local-stream",
+  "remote-stream",
+  "mic",
+  "camera",
+  "hangup",
+  "copy-link",
+].map((id) => document.querySelector(`#${id}`));
 
 if (buttonMic) {
   buttonMic.addEventListener("pointerdown", () => {
@@ -50,8 +62,9 @@ if (buttonHangup) {
     if (localStreamVideo) {
       localStreamVideo.classList.remove("active");
     }
-    socket.emit(SOCKET_MESSAGE, { type: "leave-room", roomId: ROOM_ID, userId: USER_ID });
+    socket.emit(ROOM_MESSAGE, { type: "leave-room", roomId: ROOM_ID, userId: USER_ID });
     peerConnection.close();
+    window.location = "/";
   });
 }
 
@@ -167,7 +180,7 @@ const createPeerConnection = () => {
 
   peerConnection.addEventListener("icecandidate", (event) => {
     if (event.candidate) {
-      socket.emit(SOCKET_MESSAGE, { type: "ice-candidate", roomId: ROOM_ID, candidate: event.candidate });
+      socket.emit(ROOM_MESSAGE, { type: "ice-candidate", roomId: ROOM_ID, candidate: event.candidate });
     }
   });
 };
@@ -175,7 +188,7 @@ const createPeerConnection = () => {
 const createOffer = async () => {
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
-  socket.emit(SOCKET_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
+  socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
 };
 
 const receiveOffer = async (offer) => {
@@ -185,7 +198,7 @@ const receiveOffer = async (offer) => {
 const createAnswer = async () => {
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
-  socket.emit(SOCKET_MESSAGE, { type: "answer-sdp", roomId: ROOM_ID, userId: USER_ID, answer });
+  socket.emit(ROOM_MESSAGE, { type: "answer-sdp", roomId: ROOM_ID, userId: USER_ID, answer });
 };
 
 const receiveAnswer = async (answer) => {
@@ -196,7 +209,7 @@ const addIceCandidate = async (candidate) => {
   peerConnection.addIceCandidate(candidate);
 };
 
-socket.on(SOCKET_MESSAGE, async (data) => {
+socket.on(ROOM_MESSAGE, async (data) => {
   try {
     const { type } = data;
     switch (type) {
@@ -244,14 +257,14 @@ if (form) {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (message?.value) {
-      socket.emit(SOCKET_MESSAGE, { type: "chat-message", roomId: ROOM_ID, userId: USER_ID, msg: message.value });
+      socket.emit(ROOM_MESSAGE, { type: "chat-message", roomId: ROOM_ID, userId: USER_ID, msg: message.value });
       message.value = "";
     }
   });
 }
 
 const init = () => {
-  socket.emit(SOCKET_MESSAGE, { type: "join-room", roomId: ROOM_ID, userId: USER_ID });
+  socket.emit(ROOM_MESSAGE, { type: "join-room", roomId: ROOM_ID, userId: USER_ID });
 };
 
 init();

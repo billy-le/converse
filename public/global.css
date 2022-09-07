@@ -1,0 +1,24 @@
+:root {
+  --blue-gray: #90adc6;
+  --pewter: #e9eaec;
+  --yellow: #fad02c;
+  --dark-blue: #333652;
+  --red: #f83c31;
+  --ebony: #111f29;
+
+  --form-height: 5rem;
+  --message-height: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  height: 100%;
+}
