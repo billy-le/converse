@@ -9,12 +9,18 @@
   <body>
     <main id="main">
       <section id="container">
-        <div>
-          <img src="chat.svg"  />
-          <form id="form" method="post"  >
-            <input type="text" name="roomId" placeholder="Enter a room name">
-            <button type="submit">JOIN</button>
-          </form>
+        <div id="container-inner">
+          <div id="image-container">
+            <img id="hero-img" src="chat.svg" />
+            <form id="form" method="post">
+              <input type="text" name="roomId" placeholder="Enter a room name" />
+              <button class="button" type="submit">JOIN</button>
+            </form>
+          </div>
+          <div id="rooms-container">
+            <h3>Active Rooms</h3>
+            <ul id="rooms"></ul>
+          </div>
         </div>
         <h1>CONVERSE</h1>
       </section>
