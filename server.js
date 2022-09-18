@@ -20,6 +20,7 @@ const LOBBY_MESSAGE = "lobby";
 const ROOM_MESSAGE = "room";
 
 const connectedSockets = {};
+const roomStreamers = {};
 
 function getRooms() {
   return Object.entries(connectedSockets).reduce((arr, [, socketMeta]) => {
@@ -68,8 +69,10 @@ io.on("connection", (socket) => {
     const { type } = data;
 
     switch (type) {
-      default:
+      default: {
         console.log(data);
+        break;
+      }
     }
   });
 
@@ -82,28 +85,57 @@ io.on("connection", (socket) => {
       };
     }
     switch (type) {
-      case "chat-message":
+      case "chat-message": {
         io.in(roomId).emit(ROOM_MESSAGE, data);
         break;
-      case "join-room":
+      }
+      case "join-room": {
         socket.join(roomId);
-        socket.broadcast.to(roomId).emit(ROOM_MESSAGE, data);
-        sendCurrentRooms(io)
+        io.to(roomId).emit(ROOM_MESSAGE, data);
+        if (roomStreamers[roomId]) {
+          const streamers = Array.from(roomStreamers[roomId]);
+          io.to(roomId).emit(ROOM_MESSAGE, { type: "current-streamers", userId: data.userId, streamers });
+        }
+        sendCurrentRooms(io);
         break;
-      case "leave-room":
+      }
+      case "join-stream": {
+        if (roomStreamers[roomId]) {
+          roomStreamers[roomId].add(data.userId);
+        } else {
+          roomStreamers[roomId] = new Set();
+          roomStreamers[roomId].add(data.userId);
+        }
+        io.to(roomId).emit(ROOM_MESSAGE, data);
+        const streamers = Array.from(roomStreamers[roomId]);
+        socket.to(roomId).emit(ROOM_MESSAGE, { ...data, type: "user-streamer", streamers });
+        break;
+      }
+      case "leave-stream": {
+        roomStreamers[roomId].delete(data.userId);
+        const streamers = Array.from(roomStreamers[roomId]);
+        io.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
+        break;
+      }
+      case "leave-room": {
         delete connectedSockets[socket.id];
+        roomStreamers[roomId].delete(data.userId);
         socket.broadcast.to(roomId).emit(ROOM_MESSAGE, data);
         socket.leave(roomId);
-        sendCurrentRooms(io)
+        sendCurrentRooms(io);
         break;
+      }
       case "offer-sdp":
       case "answer-sdp":
-      case "ice-candidate":
-        socket.broadcast.to(roomId).emit(ROOM_MESSAGE, data);
+      case "ice-candidate": {
+        const streamers = Array.from(roomStreamers[roomId]);
+        socket.broadcast.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         break;
-      default:
+      }
+      default: {
         console.log(data);
         break;
+      }
     }
   });
 
@@ -111,9 +143,12 @@ io.on("connection", (socket) => {
     if (connectedSockets[socket.id]) {
       const { roomId, userId } = connectedSockets[socket.id];
       if (roomId && userId) {
+        if (roomStreamers[roomId]) {
+          roomStreamers[roomId].delete(userId);
+        }
         delete connectedSockets[socket.id];
         io.to(roomId).emit(ROOM_MESSAGE, { type: "leave-room", roomId, userId });
-        sendCurrentRooms(io)
+        sendCurrentRooms(io);
       }
     }
   });

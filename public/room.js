@@ -1,53 +1,63 @@
 // polyfill https://github.com/webrtc/adapter
 import "./adapter.mjs";
-import { stream } from "/media.js";
+import { getLocalStream } from "/media.js";
 import { stunServers } from "./stun-servers.js";
 import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
 import dateFnsFormat from "https://cdn.jsdelivr.net/npm/date-fns@2.29.2/esm/format/index.js";
 const socket = io();
 
+let stream = null;
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
 const ROOM_MESSAGE = "room";
-
-let peerConnection = null;
+let peerConnections = [];
 
 const [
   form,
   message,
   messages,
   localStreamVideo,
-  remoteStreamVideo,
   buttonMic,
   buttonCamera,
   buttonHangup,
   buttonCopyLink,
+  startStreamButton,
+  streamsContainer,
+  wrapContainer,
+  remoteStreamsContainer
 ] = [
   "form",
-  "message",
+  "message-input",
   "messages",
   "local-stream",
-  "remote-stream",
   "mic",
   "camera",
   "hangup",
   "copy-link",
+  "start-stream",
+  "streams",
+  "wrap",
+  "remote-streams"
 ].map((id) => document.querySelector(`#${id}`));
 
 if (buttonMic) {
   buttonMic.addEventListener("pointerdown", () => {
     buttonMic.classList.toggle("active");
-    stream.getAudioTracks().forEach((track) => {
-      track.enabled = !track.enabled;
-    });
+    if (stream) {
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+    }
   });
 }
 
 if (buttonCamera) {
   buttonCamera.addEventListener("pointerdown", () => {
     buttonCamera.classList.toggle("active");
-    stream.getVideoTracks().forEach((track) => {
-      track.enabled = !track.enabled;
-    });
+    if (stream) {
+      stream.getVideoTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+    }
   });
 }
 
@@ -55,16 +65,44 @@ if (buttonHangup) {
   buttonHangup.addEventListener("pointerdown", () => {
     buttonHangup.classList.add("active");
     buttonHangup.setAttribute("disabled", "true");
-    if (remoteStreamVideo) {
-      remoteStreamVideo.classList.remove("active");
-      remoteStreamVideo.srcObject = null;
+
+    const remoteStreamVideos = document.querySelectorAll("[data-remote-stream]");
+
+    if (remoteStreamVideos) {
+      remoteStreamVideos.forEach((element) => {
+        element.classList.remove("active");
+        element.pause();
+        element.srcObject = null;
+        element.load();
+        element.remove();
+      });
     }
+
     if (localStreamVideo) {
       localStreamVideo.classList.remove("active");
     }
-    socket.emit(ROOM_MESSAGE, { type: "leave-room", roomId: ROOM_ID, userId: USER_ID });
-    peerConnection.close();
-    window.location = "/";
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+        stream.removeTrack(track);
+      });
+      stream = null;
+      startStreamButton.classList.remove("hidden");
+
+      if (streamsContainer) {
+        streamsContainer.classList.remove("open");
+      }
+      if (wrapContainer) {
+        wrapContainer.classList.remove("stream-open");
+      }
+    }
+    peerConnections.forEach(([_, peerConnection]) => {
+      peerConnection.close();
+    });
+
+    peerConnections = [];
+
+    socket.emit(ROOM_MESSAGE, { type: "leave-stream", roomId: ROOM_ID, userId: USER_ID });
   });
 }
 
@@ -76,13 +114,26 @@ if (buttonCopyLink) {
   });
 }
 
-if (remoteStreamVideo) {
-  remoteStreamVideo.addEventListener("loadedmetadata", () => {
-    remoteStreamVideo.play();
-    remoteStreamVideo.classList.add("active");
+if (startStreamButton) {
+  startStreamButton.addEventListener("pointerdown", async () => {
+    try {
+      stream = await getLocalStream();
 
-    if (localStreamVideo) {
-      localStreamVideo.classList.add("active");
+      startStreamButton.classList.add("hidden");
+
+      if (streamsContainer) {
+        streamsContainer.classList.add("open");
+      }
+      if (wrapContainer) {
+        wrapContainer.classList.add("stream-open");
+      }
+      if (buttonHangup) {
+        buttonHangup.classList.remove("active");
+        buttonHangup.removeAttribute("disabled");
+      }
+      socket.emit(ROOM_MESSAGE, { type: "join-stream", roomId: ROOM_ID, userId: USER_ID });
+    } catch (err) {
+      alert("User must enable permissions to begin streaming");
     }
   });
 }
@@ -145,8 +196,8 @@ function createMessage({ msg, userId }) {
   }
 }
 
-const createPeerConnection = () => {
-  peerConnection = new RTCPeerConnection({
+const createPeerConnection = (remoteUserId) => {
+  const peerConnection = new RTCPeerConnection({
     iceServers: [
       {
         urls: stunServers,
@@ -169,6 +220,22 @@ const createPeerConnection = () => {
     }
   });
 
+  const remoteStreamVideo = document.createElement("video");
+
+  remoteStreamVideo.addEventListener("loadedmetadata", () => {
+    remoteStreamVideo.setAttribute("data-remote-stream", remoteUserId);
+    remoteStreamVideo.classList.add("active");
+    remoteStreamVideo.play();
+    if(remoteStreamsContainer) {
+      remoteStreamsContainer.appendChild(remoteStreamVideo);
+      remoteStreamsContainer.classList.add('active')
+    }
+
+    if (localStreamVideo) {
+      localStreamVideo.classList.add("active");
+    }
+  });
+
   peerConnection.addEventListener("track", (event) => {
     event.streams[0].getTracks().forEach((track) => {
       remoteStream.addTrack(track);
@@ -180,32 +247,39 @@ const createPeerConnection = () => {
 
   peerConnection.addEventListener("icecandidate", (event) => {
     if (event.candidate) {
-      socket.emit(ROOM_MESSAGE, { type: "ice-candidate", roomId: ROOM_ID, candidate: event.candidate });
+      socket.emit(ROOM_MESSAGE, {
+        type: "ice-candidate",
+        roomId: ROOM_ID,
+        userId: USER_ID,
+        candidate: event.candidate,
+      });
     }
   });
+
+  return peerConnection;
 };
 
-const createOffer = async () => {
+const createOffer = async (peerConnection) => {
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
 };
 
-const receiveOffer = async (offer) => {
+const receiveOffer = async (peerConnection, offer) => {
   await peerConnection.setRemoteDescription(offer);
 };
 
-const createAnswer = async () => {
+const createAnswer = async (peerConnection) => {
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
   socket.emit(ROOM_MESSAGE, { type: "answer-sdp", roomId: ROOM_ID, userId: USER_ID, answer });
 };
 
-const receiveAnswer = async (answer) => {
+const receiveAnswer = async (peerConnection, answer) => {
   await peerConnection.setRemoteDescription(answer);
 };
 
-const addIceCandidate = async (candidate) => {
+const addIceCandidate = async (peerConnection, candidate) => {
   peerConnection.addIceCandidate(candidate);
 };
 
@@ -213,40 +287,137 @@ socket.on(ROOM_MESSAGE, async (data) => {
   try {
     const { type } = data;
     switch (type) {
-      case "chat-message":
+      case "chat-message": {
         createMessage(data);
         break;
-      case "join-room":
-        createMessage({ msg: `User ${data.userId} has joined.` });
-        await createPeerConnection();
-        await createOffer();
+      }
+      case "join-room": {
+        createMessage({
+          msg:
+            data.userId === USER_ID
+              ? `Welcome to Room "${ROOM_ID}". You are designated as User ${USER_ID}.`
+              : `User ${data.userId} has joined.`,
+        });
         break;
-      case "leave-room":
+      }
+      case "current-streamers": {
+        if (data.streamers && data.userId === USER_ID) {
+          const users = data.streamers.map((userId) => `User ${userId}`).join(", ");
+          createMessage({
+            msg: `${users} ${users.length > 1 ? "are" : "is"} currently streaming.`,
+          });
+        }
+        break;
+      }
+      case "join-stream": {
+        createMessage({
+          msg: data.userId === USER_ID ? `You have joined the stream.` : `User ${data.userId} joined the stream.`,
+        });
+        break;
+      }
+      case "user-streamer": {
+        const { streamers } = data;
+        if (streamers.includes(USER_ID) && peerConnections.findIndex(([userId]) => userId === data.userId) < 0) {
+          const peerConnection = await createPeerConnection(data.userId);
+          peerConnections.push([data.userId, peerConnection]);
+          await createOffer(peerConnection);
+        }
+        break;
+      }
+      case "leave-stream": {
+        createMessage({
+          msg: data.userId === USER_ID ? "You have left the stream" : `User ${data.userId} has left the stream.`,
+        });
+        const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        if (peerConnection) {
+          peerConnection[1].close();
+
+          const remoteStreams = document.querySelectorAll("[data-remote-stream]");
+
+          remoteStreams.forEach((element) => {
+            if (element.dataset.remoteStream === data.userId.toString()) {
+              element.classList.remove("active");
+              element.pause();
+              element.srcObject = null;
+              element.load();
+              element.remove();
+            }
+          });
+
+          if (remoteStreams.length === 1) {
+            if (localStreamVideo) {
+              localStreamVideo.classList.remove("active");
+            }
+            if(remoteStreamsContainer) {
+              remoteStreamsContainer.classList.remove('active')
+            }
+          }
+        }
+
+        peerConnections = peerConnections.filter(([userId]) => userId !== data.userId);
+        break;
+      }
+      case "leave-room": {
         createMessage({ msg: `User ${data.userId} has left.` });
-        if (remoteStreamVideo) {
-          remoteStreamVideo.classList.remove("active");
-          remoteStreamVideo.srcObject = null;
+        const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        if (peerConnection) {
+          peerConnection[1].close();
+
+          const remoteStreams = document.querySelectorAll("[data-remote-stream]");
+
+          remoteStreams.forEach((element) => {
+            if (element.dataset.remoteStream === data.userId.toString()) {
+              element.classList.remove("active");
+              element.pause();
+              element.srcObject = null;
+              element.load();
+              element.remove();
+            }
+          });
+
+          if (remoteStreams.length === 1) {
+            if (localStreamVideo) {
+              localStreamVideo.classList.remove("active");
+            }
+            if(remoteStreamsContainer) {
+              remoteStreamsContainer.classList.remove('active')
+            }
+          }
         }
-        if (localStreamVideo) {
-          localStreamVideo.classList.remove("active");
+
+        peerConnections = peerConnections.filter(([userId]) => userId !== data.userId);
+        break;
+      }
+      case "offer-sdp": {
+        const { streamers } = data;
+        if (streamers.includes(USER_ID) && peerConnections.findIndex(([userId]) => userId === data.userId) < 0) {
+          const peerConnection = await createPeerConnection(data.userId);
+          peerConnections.push([data.userId, peerConnection]);
+          await receiveOffer(peerConnection, data.offer);
+          await createAnswer(peerConnection);
         }
-        if (buttonHangup) {
-          buttonHangup.setAttribute("disabled", "true");
-          buttonHangup.classList.add("active");
+        break;
+      }
+      case "answer-sdp": {
+        const { streamers } = data;
+        if (streamers.includes(USER_ID)) {
+          const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+          if (peerConnection) {
+            await receiveAnswer(peerConnection[1], data.answer);
+          }
         }
-        peerConnection.close();
         break;
-      case "offer-sdp":
-        await createPeerConnection();
-        await receiveOffer(data.offer);
-        await createAnswer();
-        break;
-      case "answer-sdp":
-        await receiveAnswer(data.answer);
-        break;
-      case "ice-candidate":
-        await addIceCandidate(data.candidate);
-        break;
+      }
+      case "ice-candidate": {
+        const { streamers } = data;
+        if (streamers.includes(USER_ID)) {
+          const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+          if (peerConnection) {
+            await addIceCandidate(peerConnection[1], data.candidate);
+          }
+          break;
+        }
+      }
     }
   } catch (err) {
     console.log(err);

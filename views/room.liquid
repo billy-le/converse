@@ -16,16 +16,23 @@
           <ul id="messages"></ul>
           <form id="form">
             <fieldset id="input-field">
-              <input id="message" name="message" autocomplete="off" />
+              <input id="message-input" name="message" autocomplete="off" />
               <button id="send" type="submit">Send</button>
             </fieldset>
-            <button id="copy-link" type="button"><i class="fa-solid fa-clipboard"></i> Copy Invitation Link</button>
           </form>
+          <div id="chat-controls">
+            <button id="copy-link" type="button"><i class="fa-solid fa-clipboard"></i> Copy Invitation Link</button>
+            <button id="start-stream">
+              <i class="fa-solid fa-video"></i>
+              Start Stream
+            </button>
+          </div>
         </aside>
       </div>
       <main id="streams">
         <video id="local-stream" playsinline muted></video>
-        <video id="remote-stream" playsinline></video>
+        <div id="remote-streams">
+        </div>
         <div id="media-devices"></div>
         <div id="controls">
           <button id="mic">
@@ -36,7 +43,7 @@
             <i class="fa-solid fa-video"></i>
             <i class="fa-solid fa-video-slash"></i>
           </button>
-          <button id="hangup" class="active" disabled>
+          <button id="hangup">
             <i class="fa-solid fa-phone-slash"></i>
           </button>
         </div>

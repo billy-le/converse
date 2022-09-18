@@ -13,9 +13,7 @@ const mediaConstraints = {
       max: 1920,
     },
   },
-  audio: {
-
-  }
+  audio: {},
 };
 
 function addVideoStream(selector, stream) {
@@ -28,88 +26,92 @@ function addVideoStream(selector, stream) {
   }
 }
 
-if (window?.navigator?.mediaDevices) {
-  let mediaDevicesMap;
+async function getLocalStream() {
+  if (window?.navigator?.mediaDevices) {
+    let mediaDevicesMap;
 
-  const getMediaDevices = async () => {
-    mediaDevicesMap = new Map();
-    const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-    if (mediaDevices.length) {
-      mediaDevices.forEach((mediaDevice) => {
-        const kind = mediaDevice.kind;
-        const devices = mediaDevicesMap.get(mediaDevice.kind);
-        if (devices) {
-          mediaDevicesMap.set(kind, [...devices, mediaDevice]);
-        } else {
-          mediaDevicesMap.set(kind, [mediaDevice]);
-        }
-      });
-    }
-
-    const mediaDevicesContainer = document.querySelector("#media-devices");
-    mediaDevicesContainer.innerHTML = "";
-
-    const devicesByKind = Array.from(mediaDevicesMap);
-
-    devicesByKind.forEach(([kind, devices]) => {
-      const div = document.createElement("div");
-      const h2 = document.createElement("h2");
-      h2.textContent = kind === "videoinput" ? "Camera" : kind === "audiooutput" ? "Audio Output" : "Audio Input";
-      div.appendChild(h2);
-
-      const devicesList = document.createElement("select");
-
-      devices.forEach((device) => {
-        const option = document.createElement("option");
-        option.setAttribute("data-kind", device.kind.includes("video") ? "video" : "audio");
-        option.value = device.deviceId;
-        option.label = device.label;
-        devicesList.append(option);
-      });
-
-      devicesList.addEventListener("change", async (event) => {
-        const deviceId = event.target.value;
-        const kind = event.target.options[event.target.options.selectedIndex].dataset.kind;
-        const otherSelectedDevices = [];
-        stream.getTracks().forEach((track) => {
-          if (kind === track.kind) {
-            track.stop();
+    const getMediaDevices = async () => {
+      mediaDevicesMap = new Map();
+      const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+      if (mediaDevices.length) {
+        mediaDevices.forEach((mediaDevice) => {
+          const kind = mediaDevice.kind;
+          const devices = mediaDevicesMap.get(mediaDevice.kind);
+          if (devices) {
+            mediaDevicesMap.set(kind, [...devices, mediaDevice]);
           } else {
-            otherSelectedDevices.push([track.kind, { deviceId: track.id }]);
+            mediaDevicesMap.set(kind, [mediaDevice]);
+          }
+        });
+      }
+
+      const mediaDevicesContainer = document.querySelector("#media-devices");
+      mediaDevicesContainer.innerHTML = "";
+
+      const devicesByKind = Array.from(mediaDevicesMap);
+
+      devicesByKind.forEach(([kind, devices]) => {
+        const div = document.createElement("div");
+        const h2 = document.createElement("h2");
+        h2.textContent = kind === "videoinput" ? "Camera" : kind === "audiooutput" ? "Audio Output" : "Audio Input";
+        div.appendChild(h2);
+
+        const devicesList = document.createElement("select");
+
+        devices.forEach((device) => {
+          const option = document.createElement("option");
+          option.setAttribute("data-kind", device.kind.includes("video") ? "video" : "audio");
+          option.value = device.deviceId;
+          option.label = device.label;
+          devicesList.append(option);
+        });
+
+        devicesList.addEventListener("change", async (event) => {
+          const deviceId = event.target.value;
+          const kind = event.target.options[event.target.options.selectedIndex].dataset.kind;
+          const otherSelectedDevices = [];
+          stream.getTracks().forEach((track) => {
+            if (kind === track.kind) {
+              track.stop();
+            } else {
+              otherSelectedDevices.push([track.kind, { deviceId: track.id }]);
+            }
+          });
+
+          const constraints = {
+            ...mediaConstraints,
+            [kind]: {
+              ...mediaConstraints[kind],
+              deviceId,
+            },
+            ...Object.fromEntries(otherSelectedDevices),
+          };
+
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          if (stream) {
+            addVideoStream("#local-stream", stream);
           }
         });
 
-        const constraints = {
-          ...mediaConstraints,
-          [kind]: {
-            ...mediaConstraints[kind],
-            deviceId,
-          },
-          ...Object.fromEntries(otherSelectedDevices),
-        };
+        div.appendChild(devicesList);
 
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (stream) {
-          addVideoStream("#local-stream", stream);
-        }
+        mediaDevicesContainer.append(div);
       });
+    };
 
-      div.appendChild(devicesList);
-
-      mediaDevicesContainer.append(div);
+    navigator.mediaDevices.addEventListener("devicechange", () => {
+      getMediaDevices();
     });
-  };
 
-  navigator.mediaDevices.addEventListener("devicechange", () => {
+    stream = await navigator.mediaDevices.getUserMedia({ ...mediaConstraints, audio: true })
     getMediaDevices();
-  });
 
-  stream = await navigator.mediaDevices.getUserMedia({...mediaConstraints, audio: true});
-  getMediaDevices();
-
-  if (stream) {
-    addVideoStream("#local-stream", stream);
+    if (stream) {
+      addVideoStream("#local-stream", stream);
+    }
   }
+
+  return stream;
 }
 
-export { stream };
+export { getLocalStream };
