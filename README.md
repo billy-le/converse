@@ -7,7 +7,7 @@
 - [x] add chat room messages between peers
 - [x] setup web rtc connections for audio and video
 - [x] add real-time room list to lobby page
-- [ ] add start/end stream button
+- [x] add start/end stream button
 - [ ] add max streamers to 5
 - [ ] add screen-sharing capabilities
 - [ ] organize code
