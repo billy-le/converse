@@ -9,7 +9,7 @@ const socket = io();
 let stream = null;
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
 const ROOM_MESSAGE = "room";
-let peerConnections = [];
+let peerConnections = new Map();
 
 const [
   form,
@@ -23,7 +23,7 @@ const [
   startStreamButton,
   streamsContainer,
   wrapContainer,
-  remoteStreamsContainer
+  remoteStreamsContainer,
 ] = [
   "form",
   "message-input",
@@ -36,7 +36,7 @@ const [
   "start-stream",
   "streams",
   "wrap",
-  "remote-streams"
+  "remote-streams",
 ].map((id) => document.querySelector(`#${id}`));
 
 if (buttonMic) {
@@ -96,11 +96,11 @@ if (buttonHangup) {
         wrapContainer.classList.remove("stream-open");
       }
     }
-    peerConnections.forEach(([_, peerConnection]) => {
+    peerConnections.forEach((peerConnection) => {
       peerConnection.close();
     });
 
-    peerConnections = [];
+    peerConnections = new Map();
 
     socket.emit(ROOM_MESSAGE, { type: "leave-stream", roomId: ROOM_ID, userId: USER_ID });
   });
@@ -136,6 +136,29 @@ if (startStreamButton) {
       alert("User must enable permissions to begin streaming");
     }
   });
+}
+
+function handleRemoveRemoteStream(remoteStreamId) {
+  const remoteStreams = document.querySelectorAll("[data-remote-stream]");
+
+  remoteStreams.forEach((element) => {
+    if (element.dataset.remoteStream === remoteStreamId.toString()) {
+      element.classList.remove("active");
+      element.pause();
+      element.srcObject = null;
+      element.load();
+      element.remove();
+    }
+  });
+
+  if (remoteStreams.length === 1) {
+    if (localStreamVideo) {
+      localStreamVideo.classList.remove("active");
+    }
+    if (remoteStreamsContainer) {
+      remoteStreamsContainer.classList.remove("active");
+    }
+  }
 }
 
 function toHTML(element) {
@@ -226,9 +249,9 @@ const createPeerConnection = (remoteUserId) => {
     remoteStreamVideo.setAttribute("data-remote-stream", remoteUserId);
     remoteStreamVideo.classList.add("active");
     remoteStreamVideo.play();
-    if(remoteStreamsContainer) {
+    if (remoteStreamsContainer) {
       remoteStreamsContainer.appendChild(remoteStreamVideo);
-      remoteStreamsContainer.classList.add('active')
+      remoteStreamsContainer.classList.add("active");
     }
 
     if (localStreamVideo) {
@@ -252,6 +275,7 @@ const createPeerConnection = (remoteUserId) => {
         roomId: ROOM_ID,
         userId: USER_ID,
         candidate: event.candidate,
+        targetId: remoteUserId
       });
     }
   });
@@ -269,10 +293,10 @@ const receiveOffer = async (peerConnection, offer) => {
   await peerConnection.setRemoteDescription(offer);
 };
 
-const createAnswer = async (peerConnection) => {
+const createAnswer = async (peerConnection, targetId) => {
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
-  socket.emit(ROOM_MESSAGE, { type: "answer-sdp", roomId: ROOM_ID, userId: USER_ID, answer });
+  socket.emit(ROOM_MESSAGE, { type: "answer-sdp", roomId: ROOM_ID, userId: USER_ID, answer, targetId });
 };
 
 const receiveAnswer = async (peerConnection, answer) => {
@@ -304,7 +328,7 @@ socket.on(ROOM_MESSAGE, async (data) => {
         if (data.streamers && data.userId === USER_ID) {
           const users = data.streamers.map((userId) => `User ${userId}`).join(", ");
           createMessage({
-            msg: `${users} ${users.length > 1 ? "are" : "is"} currently streaming.`,
+            msg: `${users} ${data.streamers.length > 1 ? "are" : "is"} currently streaming.`,
           });
         }
         break;
@@ -317,9 +341,9 @@ socket.on(ROOM_MESSAGE, async (data) => {
       }
       case "user-streamer": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID) && peerConnections.findIndex(([userId]) => userId === data.userId) < 0) {
+        if (streamers.includes(USER_ID) && !peerConnections.has(data.userId)) {
           const peerConnection = await createPeerConnection(data.userId);
-          peerConnections.push([data.userId, peerConnection]);
+          peerConnections.set(data.userId, peerConnection);
           await createOffer(peerConnection);
         }
         break;
@@ -328,92 +352,54 @@ socket.on(ROOM_MESSAGE, async (data) => {
         createMessage({
           msg: data.userId === USER_ID ? "You have left the stream" : `User ${data.userId} has left the stream.`,
         });
-        const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        const peerConnection = peerConnections.get(data.userId);
         if (peerConnection) {
-          peerConnection[1].close();
+          peerConnection.close();
 
-          const remoteStreams = document.querySelectorAll("[data-remote-stream]");
-
-          remoteStreams.forEach((element) => {
-            if (element.dataset.remoteStream === data.userId.toString()) {
-              element.classList.remove("active");
-              element.pause();
-              element.srcObject = null;
-              element.load();
-              element.remove();
-            }
-          });
-
-          if (remoteStreams.length === 1) {
-            if (localStreamVideo) {
-              localStreamVideo.classList.remove("active");
-            }
-            if(remoteStreamsContainer) {
-              remoteStreamsContainer.classList.remove('active')
-            }
-          }
+          handleRemoveRemoteStream(data.userId);
         }
 
-        peerConnections = peerConnections.filter(([userId]) => userId !== data.userId);
+        peerConnections.delete(data.userId);
         break;
       }
       case "leave-room": {
         createMessage({ msg: `User ${data.userId} has left.` });
-        const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        const peerConnection = peerConnections.get(data.userId);
         if (peerConnection) {
-          peerConnection[1].close();
+          peerConnection.close();
 
-          const remoteStreams = document.querySelectorAll("[data-remote-stream]");
-
-          remoteStreams.forEach((element) => {
-            if (element.dataset.remoteStream === data.userId.toString()) {
-              element.classList.remove("active");
-              element.pause();
-              element.srcObject = null;
-              element.load();
-              element.remove();
-            }
-          });
-
-          if (remoteStreams.length === 1) {
-            if (localStreamVideo) {
-              localStreamVideo.classList.remove("active");
-            }
-            if(remoteStreamsContainer) {
-              remoteStreamsContainer.classList.remove('active')
-            }
-          }
+          handleRemoveRemoteStream(data.userId);
         }
 
-        peerConnections = peerConnections.filter(([userId]) => userId !== data.userId);
+        peerConnections.delete(data.userId);
         break;
       }
       case "offer-sdp": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID) && peerConnections.findIndex(([userId]) => userId === data.userId) < 0) {
+        if (streamers.includes(USER_ID) && !peerConnections.has(data.userId)) {
           const peerConnection = await createPeerConnection(data.userId);
-          peerConnections.push([data.userId, peerConnection]);
+          peerConnections.set(data.userId, peerConnection);
           await receiveOffer(peerConnection, data.offer);
-          await createAnswer(peerConnection);
+          await createAnswer(peerConnection, data.userId);
         }
         break;
       }
       case "answer-sdp": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID)) {
-          const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        if (streamers.includes(USER_ID) && USER_ID === data.targetId) {
+          const peerConnection = peerConnections.get(data.userId);
           if (peerConnection) {
-            await receiveAnswer(peerConnection[1], data.answer);
+            await receiveAnswer(peerConnection, data.answer);
           }
         }
         break;
       }
       case "ice-candidate": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID)) {
-          const peerConnection = peerConnections.find(([userId]) => userId === data.userId);
+        if (streamers.includes(USER_ID) && USER_ID === data.targetId) {
+          const peerConnection = peerConnections.get(data.userId);
           if (peerConnection) {
-            await addIceCandidate(peerConnection[1], data.candidate);
+            await addIceCandidate(peerConnection, data.candidate);
           }
           break;
         }
