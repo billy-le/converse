@@ -11,7 +11,8 @@
 - [ ] add max streamers to 5
 - [ ] add screen-sharing capabilities
 - [ ] organize code
-- [ ] host app
+- [x] host app
 
 #### Stretch Goals
 - [ ] add drawing board
+- [ ] add speech-to-text / text-to-speech
