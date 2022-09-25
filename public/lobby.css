@@ -1,6 +1,16 @@
 @import "reset.css";
 @import "global.css";
 
+@media screen and (min-width: 768px) {
+  #container {
+    flex-direction: column;
+  }
+
+  #container-inner {
+    flex-direction: row;
+  }
+}
+
 body {
   background-image: radial-gradient(var(--dark-blue), var(--ebony));
   display: flex;
@@ -32,15 +42,7 @@ body {
   gap: 2rem;
 }
 
-@media screen and (min-width: 768px) {
-  #container {
-    flex-direction: column;
-  }
 
-  #container-inner {
-    flex-direction: row;
-  }
-}
 
 h1 {
   color: white;
