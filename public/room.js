@@ -9,6 +9,7 @@ const socket = io();
 let stream = null;
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
 const ROOM_MESSAGE = "room";
+let facingMode = "user";
 let peerConnections = new Map();
 
 const [
@@ -24,6 +25,7 @@ const [
   streamsContainer,
   wrapContainer,
   remoteStreamsContainer,
+  swapCamera,
 ] = [
   "form",
   "message-input",
@@ -37,7 +39,25 @@ const [
   "streams",
   "wrap",
   "remote-streams",
+  "swap-camera",
 ].map((id) => document.querySelector(`#${id}`));
+
+if (swapCamera) {
+  swapCamera.addEventListener("pointerdown", async () => {
+    facingMode = facingMode === "user" ? "environment" : "user";
+    if (stream) {
+      const camera = await window.navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode,
+        },
+      });
+
+      camera.getVideoTracks().forEach((track) => {
+        stream.addTrack(track);
+      });
+    }
+  });
+}
 
 if (buttonMic) {
   buttonMic.addEventListener("pointerdown", () => {
@@ -275,7 +295,7 @@ const createPeerConnection = (remoteUserId) => {
         roomId: ROOM_ID,
         userId: USER_ID,
         candidate: event.candidate,
-        targetId: remoteUserId
+        targetId: remoteUserId,
       });
     }
   });
@@ -325,7 +345,7 @@ socket.on(ROOM_MESSAGE, async (data) => {
         break;
       }
       case "current-streamers": {
-        if (data.streamers && data.userId === USER_ID) {
+        if (data.streamers?.length && data.userId === USER_ID) {
           const users = data.streamers.map((userId) => `User ${userId}`).join(", ");
           createMessage({
             msg: `${users} ${data.streamers.length > 1 ? "are" : "is"} currently streaming.`,
