@@ -1,75 +1,6 @@
 @import "reset.css";
 @import "global.css";
 
-@media screen and (min-width: 768px) {
-  #page-container {
-    display: flex;
-  }
-
-  #wrap {
-    max-width: 50%;
-  }
-
-  #wrap.stream-open {
-    width: min-content;
-    display: block;
-    pointer-events: all;
-  }
-
-  #wrap.stream-open #chatroom {
-    min-width: 320px;
-    width: 320px;
-    resize: horizontal;
-  }
-
-  #wrap.stream-open {
-    position: relative;
-  }
-
-  #wrap.stream-open #chatroom {
-    position: static;
-    width: auto;
-    bottom: auto;
-    max-height: none;
-  }
-
-  #wrap.stream-open #chatroom,
-  #wrap.stream-open #messages {
-    height: 100%;
-  }
-
-  #wrap.stream-open #chatroom {
-    background-color: var(--dark-blue);
-    pointer-events: all;
-  }
-
-  #wrap.stream-open #messages {
-    background-color: #fff;
-  }
-
-  #wrap.stream-open .system-message {
-    color: var(--dark-blue);
-  }
-
-  #wrap.stream-open #form,
-  #wrap.stream-open #chat-controls,
-  #media-devices {
-    display: block;
-  }
-
-  button#swap-camera {
-    display: none;
-  }
-
-  video {
-    object-fit: contain;
-  }
-
-  #remote-streams.active {
-    flex-direction: row;
-  }
-}
-
 #streams {
   background-color: var(--ebony);
   height: 100%;
@@ -175,6 +106,7 @@ video {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  font-size: 1rem;
 }
 
 #input-field {
@@ -389,4 +321,73 @@ video {
 
 #start-stream.hidden {
   display: none;
+}
+
+@media screen and (min-width: 768px) {
+  #page-container {
+    display: flex;
+  }
+
+  #wrap {
+    max-width: 50%;
+  }
+
+  #wrap.stream-open {
+    width: min-content;
+    display: block;
+    pointer-events: all;
+  }
+
+  #wrap.stream-open #chatroom {
+    min-width: 320px;
+    width: 320px;
+    resize: horizontal;
+  }
+
+  #wrap.stream-open {
+    position: relative;
+  }
+
+  #wrap.stream-open #chatroom {
+    position: static;
+    width: auto;
+    bottom: auto;
+    max-height: none;
+  }
+
+  #wrap.stream-open #chatroom,
+  #wrap.stream-open #messages {
+    height: 100%;
+  }
+
+  #wrap.stream-open #chatroom {
+    background-color: var(--dark-blue);
+    pointer-events: all;
+  }
+
+  #wrap.stream-open #messages {
+    background-color: #fff;
+  }
+
+  #wrap.stream-open .system-message {
+    color: var(--dark-blue);
+  }
+
+  #wrap.stream-open #form,
+  #wrap.stream-open #chat-controls,
+  #media-devices {
+    display: block;
+  }
+
+  button#swap-camera {
+    display: none;
+  }
+
+  video {
+    object-fit: contain;
+  }
+
+  #remote-streams.active {
+    flex-direction: row;
+  }
 }
