@@ -120,7 +120,8 @@ io.on("connection", (socket) => {
       case "leave-room": {
         delete connectedSockets[socket.id];
         roomStreamers[roomId].delete(data.userId);
-        socket.broadcast.to(roomId).emit(ROOM_MESSAGE, data);
+        const streamers = Array.from(roomStreamers[roomId]);
+        socket.broadcast.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         socket.leave(roomId);
         sendCurrentRooms(io);
         break;
@@ -143,11 +144,13 @@ io.on("connection", (socket) => {
     if (connectedSockets[socket.id]) {
       const { roomId, userId } = connectedSockets[socket.id];
       if (roomId && userId) {
+        let streamers = []
         if (roomStreamers[roomId]) {
           roomStreamers[roomId].delete(userId);
+          streamers = Array.from(roomStreamers[roomId]);
         }
         delete connectedSockets[socket.id];
-        io.to(roomId).emit(ROOM_MESSAGE, { type: "leave-room", roomId, userId });
+        io.to(roomId).emit(ROOM_MESSAGE, { type: "leave-room", roomId, userId, streamers });
         sendCurrentRooms(io);
       }
     }

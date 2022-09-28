@@ -323,6 +323,15 @@ video {
   display: none;
 }
 
+.fa-clipboard,
+.fa-video {
+  margin-right: 4px;
+}
+
+.fa-arrow-right-to-bracket {
+  margin-left: 4px;
+}
+
 @media screen and (min-width: 768px) {
   #page-container {
     display: flex;

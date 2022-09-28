@@ -8,7 +8,7 @@
 - [x] setup web rtc connections for audio and video
 - [x] add real-time room list to lobby page
 - [x] add start/end stream button
-- [ ] add max streamers to 5
+- [x] add max streamers to 4
 - [ ] add screen-sharing capabilities
 - [ ] organize code
 - [x] host app

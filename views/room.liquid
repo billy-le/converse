@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/room.css" />
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="/room.css"/>
     <script src="https://kit.fontawesome.com/536e9f73a2.js" crossorigin="anonymous" defer></script>
     <script>
       const ROOM_ID = "{{roomId}}";
     </script>
     <script src="/room.js" type="module"></script>
-    <title>{{ roomId }} Room</title>
+    <title>{{ roomId }}
+      Room</title>
   </head>
   <body>
     <div id="page-container">
@@ -19,12 +20,14 @@
           <ul id="messages"></ul>
           <form id="form">
             <fieldset id="input-field">
-              <input id="message-input" name="message" autocomplete="off" />
+              <input id="message-input" name="message" autocomplete="off"/>
               <button id="send" type="submit">Send</button>
             </fieldset>
           </form>
           <div id="chat-controls">
-            <button id="copy-link" type="button"><i class="fa-solid fa-clipboard"></i> Copy Invitation Link</button>
+            <button id="copy-link" type="button">
+              <i class="fa-solid fa-clipboard"></i>
+              Copy Invitation Link</button>
             <button id="start-stream">
               <i class="fa-solid fa-video"></i>
               Start Stream

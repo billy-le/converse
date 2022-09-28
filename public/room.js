@@ -9,6 +9,7 @@ const socket = io();
 let stream = null;
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
 const ROOM_MESSAGE = "room";
+const MAX_STREAMERS = 4;
 let facingMode = "user";
 let peerConnections = new Map();
 
@@ -327,6 +328,20 @@ const addIceCandidate = async (peerConnection, candidate) => {
   peerConnection.addIceCandidate(candidate);
 };
 
+function toggleStreamButtonVisibility(streamers) {
+  if (startStreamButton && !streamers?.includes(USER_ID)) {
+    if (streamers?.length === MAX_STREAMERS) {
+      startStreamButton.classList.add("hidden");
+    } else if (streamers?.length && streamers.length < MAX_STREAMERS) {
+      startStreamButton.classList.remove("hidden");
+      startStreamButton.innerHTML = `Join Stream<i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+    } else {
+      startStreamButton.classList.remove("hidden");
+      startStreamButton.innerHTML = `<i class="fa-solid fa-video"></i>Start Stream`;
+    }
+  }
+}
+
 socket.on(ROOM_MESSAGE, async (data) => {
   try {
     const { type } = data;
@@ -345,12 +360,14 @@ socket.on(ROOM_MESSAGE, async (data) => {
         break;
       }
       case "current-streamers": {
-        if (data.streamers?.length && data.userId === USER_ID) {
-          const users = data.streamers.map((userId) => `User ${userId}`).join(", ");
+        const { streamers } = data;
+        if (streamers?.length && data.userId === USER_ID) {
+          const users = streamers.map((userId) => `User ${userId}`).join(", ");
           createMessage({
-            msg: `${users} ${data.streamers.length > 1 ? "are" : "is"} currently streaming.`,
+            msg: `${users} ${streamers.length > 1 ? "are" : "is"} currently streaming.`,
           });
         }
+        toggleStreamButtonVisibility(streamers);
         break;
       }
       case "join-stream": {
@@ -361,11 +378,13 @@ socket.on(ROOM_MESSAGE, async (data) => {
       }
       case "user-streamer": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID) && !peerConnections.has(data.userId)) {
+        if (streamers?.includes(USER_ID) && !peerConnections.has(data.userId)) {
           const peerConnection = await createPeerConnection(data.userId);
           peerConnections.set(data.userId, peerConnection);
           await createOffer(peerConnection);
         }
+
+        toggleStreamButtonVisibility(streamers);
         break;
       }
       case "leave-stream": {
@@ -380,6 +399,7 @@ socket.on(ROOM_MESSAGE, async (data) => {
         }
 
         peerConnections.delete(data.userId);
+        toggleStreamButtonVisibility(data.streamers);
         break;
       }
       case "leave-room": {
@@ -392,6 +412,7 @@ socket.on(ROOM_MESSAGE, async (data) => {
         }
 
         peerConnections.delete(data.userId);
+        toggleStreamButtonVisibility(data.streamers);
         break;
       }
       case "offer-sdp": {
