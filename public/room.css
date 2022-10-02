@@ -220,12 +220,12 @@ video {
   background-color: var(--red);
 }
 
-#controls button > :is(.fa-microphone-lines-slash, .fa-video-slash),
+#controls button :is(.fa-microphone-lines-slash, .fa-video-slash, .fa-slash),
 #controls button.active > :is(.fa-microphone-lines, .fa-video) {
   display: none;
 }
 
-#controls button.active > :is(.fa-microphone-lines-slash, .fa-video-slash) {
+#controls button.active :is(.fa-microphone-lines-slash, .fa-video-slash, .fa-slash) {
   display: block;
 }
 

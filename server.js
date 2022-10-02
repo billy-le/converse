@@ -1,3 +1,5 @@
+"use strict";
+
 const express = require("express");
 const http = require("http");
 const bodyParser = require("body-parser");
@@ -112,15 +114,21 @@ io.on("connection", (socket) => {
         break;
       }
       case "leave-stream": {
-        roomStreamers[roomId].delete(data.userId);
-        const streamers = Array.from(roomStreamers[roomId]);
+        let streamers = [];
+        if (roomStreamers[roomId]) {
+          roomStreamers[roomId].delete(data.userId);
+          streamers = Array.from(roomStreamers[roomId]);
+        }
         io.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         break;
       }
       case "leave-room": {
         delete connectedSockets[socket.id];
-        roomStreamers[roomId].delete(data.userId);
-        const streamers = Array.from(roomStreamers[roomId]);
+        let streamers = [];
+        if (roomStreamers[roomId]) {
+          roomStreamers[roomId].delete(data.userId);
+          streamers = Array.from(roomStreamers[roomId]);
+        }
         socket.broadcast.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         socket.leave(roomId);
         sendCurrentRooms(io);
@@ -129,7 +137,10 @@ io.on("connection", (socket) => {
       case "offer-sdp":
       case "answer-sdp":
       case "ice-candidate": {
-        const streamers = Array.from(roomStreamers[roomId]);
+        let streamers = [];
+        if (roomStreamers[roomId]) {
+          streamers = Array.from(roomStreamers[roomId]);
+        }
         socket.broadcast.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         break;
       }
@@ -144,7 +155,7 @@ io.on("connection", (socket) => {
     if (connectedSockets[socket.id]) {
       const { roomId, userId } = connectedSockets[socket.id];
       if (roomId && userId) {
-        let streamers = []
+        let streamers = [];
         if (roomStreamers[roomId]) {
           roomStreamers[roomId].delete(userId);
           streamers = Array.from(roomStreamers[roomId]);

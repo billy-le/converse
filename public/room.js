@@ -1,12 +1,16 @@
+"use strict";
+
 // polyfill https://github.com/webrtc/adapter
 import "./adapter.mjs";
 import { getLocalStream } from "/media.js";
+import { getScreenCastMedia } from "./stream.js";
 import { stunServers } from "./stun-servers.js";
 import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
 import dateFnsFormat from "https://cdn.jsdelivr.net/npm/date-fns@2.29.2/esm/format/index.js";
 const socket = io();
 
 let stream = null;
+let screenCastId = null;
 const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
 const ROOM_MESSAGE = "room";
 const MAX_STREAMERS = 4;
@@ -27,6 +31,7 @@ const [
   wrapContainer,
   remoteStreamsContainer,
   swapCamera,
+  startScreenCastButton,
 ] = [
   "form",
   "message-input",
@@ -41,7 +46,58 @@ const [
   "wrap",
   "remote-streams",
   "swap-camera",
+  "screen-cast",
 ].map((id) => document.querySelector(`#${id}`));
+
+if (startScreenCastButton) {
+  startScreenCastButton.addEventListener("pointerdown", async () => {
+    const video = document.querySelector("#local-stream");
+    if (startScreenCastButton.classList.contains("active")) {
+      video.srcObject.getTracks().forEach((track) => {
+        track.stop();
+      });
+      peerConnections.forEach((peerConnection) => {
+        const senders = peerConnection.getSenders();
+        for (const sender of senders) {
+          if (sender.track?.id === screenCastId) {
+            peerConnection.removeTrack(sender);
+          }
+        }
+      });
+      startScreenCastButton.classList.remove("active");
+      screenCastId = null;
+      video.srcObject = stream;
+    } else {
+      const screenCast = await getScreenCastMedia();
+      startScreenCastButton.classList.add("active");
+      if (screenCast) {
+        if (video) {
+          video.srcObject = screenCast;
+        }
+        screenCast.getVideoTracks().forEach((track) => {
+          track.addEventListener("ended", async () => {
+            peerConnections.forEach((peerConnection) => {
+              const senders = peerConnection.getSenders();
+              const sender = senders.find((sender) => sender.track?.id === track.id);
+              if (sender) {
+                peerConnection.removeTrack(sender);
+              }
+            });
+
+            startScreenCastButton.classList.remove("active");
+            screenCastId = null;
+            video.srcObject = stream;
+          });
+          screenCastId = track.id;
+
+          peerConnections.forEach((peerConnection) => {
+            peerConnection.addTrack(track, screenCast);
+          });
+        });
+      }
+    }
+  });
+}
 
 if (swapCamera) {
   swapCamera.addEventListener("pointerdown", async () => {
@@ -91,10 +147,10 @@ if (buttonHangup) {
 
     if (remoteStreamVideos) {
       remoteStreamVideos.forEach((element) => {
+        element.srcObject.getTracks().forEach((track) => {
+          track.stop();
+        });
         element.classList.remove("active");
-        element.pause();
-        element.srcObject = null;
-        element.load();
         element.remove();
       });
     }
@@ -164,10 +220,10 @@ function handleRemoveRemoteStream(remoteStreamId) {
 
   remoteStreams.forEach((element) => {
     if (element.dataset.remoteStream === remoteStreamId.toString()) {
+      element.srcObject.getTracks().forEach((track) => {
+        track.stop();
+      });
       element.classList.remove("active");
-      element.pause();
-      element.srcObject = null;
-      element.load();
       element.remove();
     }
   });
@@ -255,8 +311,6 @@ const createPeerConnection = (remoteUserId) => {
     });
   }
 
-  const remoteStream = new MediaStream();
-
   peerConnection.addEventListener("connectionstatechange", () => {
     if (peerConnection.connectionState === "connected" && buttonHangup) {
       buttonHangup.removeAttribute("disabled");
@@ -264,29 +318,53 @@ const createPeerConnection = (remoteUserId) => {
     }
   });
 
-  const remoteStreamVideo = document.createElement("video");
-
-  remoteStreamVideo.addEventListener("loadedmetadata", () => {
-    remoteStreamVideo.setAttribute("data-remote-stream", remoteUserId);
-    remoteStreamVideo.classList.add("active");
-    remoteStreamVideo.play();
-    if (remoteStreamsContainer) {
-      remoteStreamsContainer.appendChild(remoteStreamVideo);
-      remoteStreamsContainer.classList.add("active");
-    }
-
-    if (localStreamVideo) {
-      localStreamVideo.classList.add("active");
-    }
+  peerConnection.addEventListener("negotiationneeded", (event) => {
+    createOffer(event.target);
   });
 
   peerConnection.addEventListener("track", (event) => {
-    event.streams[0].getTracks().forEach((track) => {
-      remoteStream.addTrack(track);
+    const remoteStream = new MediaStream();
+    event.streams.forEach((stream) => {
+      stream.getTracks().forEach((track) => {
+        remoteStream.addTrack(track);
+
+        if (track.kind.includes("video")) {
+          const videoElement = document.querySelector(`[data-track-id="${track.id}"]`);
+
+          if (!videoElement) {
+            const remoteStreamVideo = document.createElement("video");
+            remoteStreamVideo.setAttribute("data-remote-stream", remoteUserId);
+            remoteStreamVideo.setAttribute("data-track-id", track.id);
+            remoteStreamVideo.classList.add("active");
+
+            if (remoteStreamsContainer) {
+              remoteStreamsContainer.appendChild(remoteStreamVideo);
+              remoteStreamsContainer.classList.add("active");
+            }
+
+            if (localStreamVideo) {
+              localStreamVideo.classList.add("active");
+            }
+
+            if (remoteStreamVideo) {
+              remoteStreamVideo.srcObject = remoteStream;
+              remoteStreamVideo.play();
+            }
+          }
+        }
+      });
+
+      stream.addEventListener('removetrack', (event) => {
+        remoteStream.getTracks().forEach(track => {
+          if(track.id === event.track.id) {
+            const videoElement = document.querySelector(`[data-track-id="${track.id}"]`);
+            videoElement.classList.remove("active");
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+            videoElement.remove()
+          }
+        })
+      })
     });
-    if (remoteStreamVideo) {
-      remoteStreamVideo.srcObject = remoteStream;
-    }
   });
 
   peerConnection.addEventListener("icecandidate", (event) => {
@@ -417,11 +495,17 @@ socket.on(ROOM_MESSAGE, async (data) => {
       }
       case "offer-sdp": {
         const { streamers } = data;
-        if (streamers.includes(USER_ID) && !peerConnections.has(data.userId)) {
-          const peerConnection = await createPeerConnection(data.userId);
-          peerConnections.set(data.userId, peerConnection);
-          await receiveOffer(peerConnection, data.offer);
-          await createAnswer(peerConnection, data.userId);
+        if (streamers.includes(USER_ID)) {
+          const peerConnection = peerConnections.get(data.userId);
+          if (!peerConnection) {
+            const newPeerConnection = await createPeerConnection(data.userId);
+            peerConnections.set(data.userId, newPeerConnection);
+            await receiveOffer(newPeerConnection, data.offer);
+            await createAnswer(newPeerConnection, data.userId);
+          } else {
+            await receiveOffer(peerConnection, data.offer);
+            await createAnswer(peerConnection, data.userId);
+          }
         }
         break;
       }
