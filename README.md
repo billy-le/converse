@@ -9,7 +9,7 @@
 - [x] add real-time room list to lobby page
 - [x] add start/end stream button
 - [x] add max streamers to 4
-- [ ] add screen-sharing capabilities
+- [x] add screen-sharing capabilities
 - [ ] organize code
 - [x] host app
 
