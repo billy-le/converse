@@ -1,6 +1,3 @@
-@import "reset.css";
-@import "global.css";
-
 #streams {
   background-color: var(--ebony);
   height: 100%;
