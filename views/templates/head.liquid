@@ -1,0 +1,17 @@
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="/reset.css" rel="stylesheet"/>
+  <link href="/global.css" rel="stylesheet"/>
+  <script src="https://kit.fontawesome.com/536e9f73a2.js" crossorigin="anonymous" defer></script>
+  {% for source in sources %}
+    {% if source.type == "script" %}
+      <script src={{source.path}} type="module"></script>
+    {% elsif source.type == 'stylesheet' %}
+      <link href={{source.path}} rel="stylesheet"/>
+    {% endif %}
+  {% endfor %}
+  <title>{{title}}
+  </title>
+</head>

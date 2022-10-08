@@ -6,7 +6,9 @@ const bodyParser = require("body-parser");
 const { Server } = require("socket.io");
 const { Liquid } = require("liquidjs");
 const app = express();
-const engine = new Liquid();
+const engine = new Liquid({
+  cache: process.env.NODE_ENV === "production",
+});
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -46,7 +48,13 @@ function sendCurrentRooms(io) {
 }
 
 app.get("/", (_, res) => {
-  res.render("lobby");
+  res.render("pages/lobby", {
+    title: "Converse | Lobby",
+    sources: [
+      { type: "stylesheet", path: "/lobby.css" },
+      { type: "script", path: "/lobby.js" },
+    ],
+  });
 });
 
 app.get("/rooms", (_, res) => {
@@ -59,7 +67,15 @@ app.post("/", (req, res) => {
 });
 
 app.get("/room/:roomId", (req, res) => {
-  res.render("room", { roomId: req.params.roomId });
+  const roomId = req.params.roomId;
+  res.render("pages/room", {
+    title: `${roomId} Room`,
+    sources: [
+      { type: "stylesheet", path: "/room.css" },
+      { type: "script", path: "/room.js" },
+    ],
+    roomId,
+  });
 });
 
 io.on("connection", (socket) => {
