@@ -72,6 +72,7 @@ app.get("/room/:roomId", (req, res) => {
     title: `${roomId} Room`,
     sources: [
       { type: "stylesheet", path: "/room.css" },
+      { type: "script", path: "/chat.js" },
       { type: "script", path: "/room.js" },
     ],
     roomId,
