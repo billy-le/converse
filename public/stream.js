@@ -2,6 +2,7 @@
 
 // polyfill https://github.com/webrtc/adapter
 await import("./adapter.mjs");
+const emitter = await import("./emitter.js").then(({ emitter }) => emitter);
 
 let stream;
 let screenCastId = null;
@@ -26,15 +27,10 @@ if (startScreenCastButton) {
       localStreamVideo.srcObject.getTracks().forEach((track) => {
         track.stop();
       });
-      const event = new CustomEvent("stream:remove-track", {
-        detail: {
-          trackId: screenCastId,
-        },
-      });
-      window.dispatchEvent(event);
       startScreenCastButton.classList.remove("active");
-      screenCastId = null;
       localStreamVideo.srcObject = stream;
+      emitter.emit("stream:remove-track", { trackId: Number(screenCastId) });
+      screenCastId = null;
     } else {
       const screenCast = await import("./screencast.js").then(({ getScreenCastMedia }) => getScreenCastMedia());
       startScreenCastButton.classList.add("active");
@@ -45,27 +41,14 @@ if (startScreenCastButton) {
 
         screenCast.getVideoTracks().forEach((track) => {
           track.addEventListener("ended", async () => {
-            const event = new CustomEvent("stream:remove-track", {
-              detail: {
-                trackId: track.id,
-              },
-            });
-            window.dispatchEvent(event);
-
             startScreenCastButton.classList.remove("active");
             screenCastId = null;
             localStreamVideo.srcObject = stream;
+            emitter.emit("stream:remove-track", { trackId: track.id });
           });
 
           screenCastId = track.id;
-
-          const event = new CustomEvent("stream:add-screen-cast", {
-            detail: {
-              track,
-              screenCast,
-            },
-          });
-          window.dispatchEvent(event);
+          emitter.emit("stream:add-screen-cast", { track, screenCast });
         });
       }
     }
@@ -144,9 +127,7 @@ if (buttonHangup) {
     }
 
     startScreenCastButton.classList.remove("active");
-
-    const event = new CustomEvent("stream:stop", { detail: {} });
-    window.dispatchEvent(event);
+    emitter.emit("stream:stop");
   });
 }
 
@@ -259,11 +240,11 @@ async function getLocalStream() {
   return stream;
 }
 
-window.addEventListener("stream:start", async (e) => {
+emitter.on("stream:start", async (data) => {
   try {
     await getLocalStream().then((stream) => {
       if (stream) {
-        e.detail.handleSuccess();
+        data.handleSuccess();
         streamsContainer?.classList?.add("open");
         addVideoStream(stream);
       }
@@ -274,10 +255,8 @@ window.addEventListener("stream:start", async (e) => {
   }
 });
 
-window.addEventListener("stream:add-video", (event) => {
-  const {
-    detail: { track, target, remoteStream },
-  } = event;
+emitter.on("stream:add-video", (data) => {
+  const { track, target, remoteStream } = data;
   if (track) {
     const videoElement = document.querySelector(`[data-track-id="${track.id}"]`);
     if (!videoElement) {
@@ -305,10 +284,8 @@ window.addEventListener("stream:add-video", (event) => {
   }
 });
 
-window.addEventListener("stream:remove-video", (event) => {
-  const {
-    detail: { track },
-  } = event;
+emitter.emit("stream:remove-video", (data) => {
+  const { track } = data;
   if (track) {
     const videoElement = document.querySelector(`[data-track-id="${track.id}"]`);
     videoElement.classList.remove("active");
@@ -317,10 +294,8 @@ window.addEventListener("stream:remove-video", (event) => {
   }
 });
 
-window.addEventListener("stream:disconnect", (event) => {
-  const {
-    detail: { target },
-  } = event;
+emitter.on("stream:disconnect", (data) => {
+  const { target } = data;
   let remoteStreams = document.querySelectorAll(`[data-remote-stream]`);
   let remoteCount = remoteStreams.length;
   remoteStreams.forEach((element) => {

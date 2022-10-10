@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
 const socket = io();
@@ -42,7 +42,7 @@ function createRoomList(rooms) {
       joinButtonWrapper.append(joinButton);
       content.append(usersWrapper, joinButtonWrapper);
       listItem.append(roomName, content);
-      roomsList.append(listItem)
+      roomsList.append(listItem);
     });
   }
 }
@@ -57,11 +57,15 @@ socket.on(LOBBY_MESSAGE, (data) => {
 });
 
 window.addEventListener("resize", () => {
-  roomsContainer.style.height = heroImg.clientHeight + "px";
+  if (heroImg.clientHeight) {
+    roomsContainer.style.height = heroImg.clientHeight + "px";
+  }
 });
 
 async function init() {
-  roomsContainer.style.height = heroImg.clientHeight + "px";
+  if (heroImg.clientHeight) {
+    roomsContainer.style.height = heroImg.clientHeight + "px";
+  }
   const rooms = await fetch("/rooms").then((res) => res.json());
   createRoomList(rooms);
 }

@@ -2,28 +2,27 @@
 
 window.addEventListener("DOMContentLoaded", async () => {
   const SocketIO = await import("https://cdn.socket.io/4.4.1/socket.io.esm.min.js");
+  const emitter = await import("./emitter.js").then(({ emitter }) => emitter);
   const socket = SocketIO.io();
   const USER_ID = Math.floor(Math.random() * (100_000 - 1) + 0);
   const ROOM_MESSAGE = "room";
   let peerConnections = new Map();
 
-  window.addEventListener("message:send", (e) => {
-    socket.emit(ROOM_MESSAGE, { type: "chat-message", roomId: ROOM_ID, userId: USER_ID, msg: e.detail.message });
-    e.detail.clear();
+  emitter.on("message:send", (data) => {
+    socket.emit(ROOM_MESSAGE, { type: "chat-message", roomId: ROOM_ID, userId: USER_ID, msg: data.message });
+    data.clear();
   });
 
-  window.addEventListener("stream:join", () => {
+  emitter.on("stream:join", () => {
     socket.emit(ROOM_MESSAGE, { type: "join-stream", roomId: ROOM_ID, userId: USER_ID });
   });
 
-  window.addEventListener("stream:stop", () => {
+  emitter.on("stream:stop", () => {
     socket.emit(ROOM_MESSAGE, { type: "leave-stream", roomId: ROOM_ID, userId: USER_ID });
   });
 
-  window.addEventListener("stream:remove-track", (event) => {
-    const {
-      detail: { trackId },
-    } = event;
+  emitter.on("stream:remove-track", (data) => {
+    const { trackId } = data;
 
     peerConnections.forEach((peer) => {
       const senders = peer.getSenders();
@@ -34,33 +33,40 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  window.addEventListener("stream:add-screen-cast", (event) => {
-    const {
-      detail: { track, screenCast },
-    } = event;
+  emitter.on("stream:add-screen-cast", (data) => {
+    const { track, screenCast } = data;
 
     peerConnections.forEach((peer) => {
       peer.addTrack(track, screenCast);
     });
   });
 
-  window.addEventListener("negotiation:offer", (event) => {
-    const { offer } = event.detail;
-    if (offer) {
-      socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
+  emitter.on("peer:negotiation", (data) => {
+    const { target } = data;
+    const peer = peerConnections.get(target);
+    if (peer) {
+      peer.call().then((offer) => {
+        socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
+      });
     }
   });
 
+  emitter.on("peer:ice-candidate", (data) => {
+    socket.emit(ROOM_MESSAGE, {
+      type: "ice-candidate",
+      roomId: ROOM_ID,
+      userId: USER_ID,
+      candidate: data.candidate,
+      target: data.target,
+    });
+  });
+
   function dispatchMessageReceive(data) {
-    const event = new CustomEvent("message:receive", { detail: data });
-    window.dispatchEvent(event);
+    emitter.emit("message:receive", data);
   }
 
   function dispatchMessageStreamers(data) {
-    const event = new CustomEvent("message:streamers", {
-      detail: data,
-    });
-    window.dispatchEvent(event);
+    emitter.emit("message:streamers", data);
   }
 
   socket.on(ROOM_MESSAGE, async (data) => {
@@ -106,16 +112,8 @@ window.addEventListener("DOMContentLoaded", async () => {
             const peer = await import("./peer.js").then(
               ({ Peer }) =>
                 new Peer({
+                  emitter,
                   target: data.userId,
-                  onIceCandidate: (event) => {
-                    socket.emit(ROOM_MESSAGE, {
-                      type: "ice-candidate",
-                      roomId: ROOM_ID,
-                      userId: USER_ID,
-                      candidate: event.candidate,
-                      target: data.userId,
-                    });
-                  },
                 })
             );
 
@@ -146,16 +144,11 @@ window.addEventListener("DOMContentLoaded", async () => {
 
           if (data.userId !== USER_ID) {
             const peer = peerConnections.get(data.userId);
-            if(peer) {
+            if (peer) {
               peer.close();
             }
             peerConnections.delete(data.userId);
-            const event = new CustomEvent("stream:disconnect", {
-              detail: {
-                target: data.userId,
-              },
-            });
-            window.dispatchEvent(event);
+            emitter.emit("stream:disconnect", { target: data.userId });
           } else {
             peerConnections.forEach((peer) => {
               peer.close();
@@ -178,12 +171,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
           if (peer) {
             peer.close();
-            const event = new CustomEvent("stream:disconnect", {
-              detail: {
-                target: data.userId,
-              },
-            });
-            window.dispatchEvent(event);
+            emitter.emit("stream:disconnect", { target: data.userId });
           }
 
           peerConnections.delete(data.userId);
@@ -202,16 +190,8 @@ window.addEventListener("DOMContentLoaded", async () => {
               peer = await import("./peer.js").then(
                 ({ Peer }) =>
                   new Peer({
+                    emitter,
                     target: data.userId,
-                    onIceCandidate: (event) => {
-                      socket.emit(ROOM_MESSAGE, {
-                        type: "ice-candidate",
-                        roomId: ROOM_ID,
-                        userId: USER_ID,
-                        candidate: event.candidate,
-                        target: data.userId,
-                      });
-                    },
                   })
               );
 
