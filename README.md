@@ -10,7 +10,7 @@
 - [x] add start/end stream button
 - [x] add max streamers to 4
 - [x] add screen-sharing capabilities
-- [ ] organize code
+- [x] organize code
 - [x] host app
 
 #### Stretch Goals
