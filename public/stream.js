@@ -29,8 +29,7 @@ if (startScreenCastButton) {
       });
       startScreenCastButton.classList.remove("active");
       localStreamVideo.srcObject = stream;
-      emitter.emit("stream:remove-track", { trackId: Number(screenCastId) });
-      screenCastId = null;
+      emitter.emit("stream:remove-track", { trackId: screenCastId });
     } else {
       const screenCast = await import("./screencast.js").then(({ getScreenCastMedia }) => getScreenCastMedia());
       startScreenCastButton.classList.add("active");
@@ -42,7 +41,6 @@ if (startScreenCastButton) {
         screenCast.getVideoTracks().forEach((track) => {
           track.addEventListener("ended", async () => {
             startScreenCastButton.classList.remove("active");
-            screenCastId = null;
             localStreamVideo.srcObject = stream;
             emitter.emit("stream:remove-track", { trackId: track.id });
           });
@@ -284,7 +282,7 @@ emitter.on("stream:add-video", (data) => {
   }
 });
 
-emitter.emit("stream:remove-video", (data) => {
+emitter.on("stream:remove-video", (data) => {
   const { track } = data;
   if (track) {
     const videoElement = document.querySelector(`[data-track-id="${track.id}"]`);

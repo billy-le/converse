@@ -40,6 +40,7 @@ export class Peer {
 
     this.#connection.addEventListener("track", (event) => {
       const remoteStream = new MediaStream();
+
       event.streams.forEach((stream) => {
         stream.getTracks().forEach((track) => {
           remoteStream.addTrack(track);
@@ -70,16 +71,16 @@ export class Peer {
     return this.#connection.localDescription;
   }
 
-  async answer(sdp) {
-    await this.#connection.setRemoteDescription(sdp);
+  async answer(offer) {
+    await this.#connection.setRemoteDescription(offer);
 
-    if (!this.#connection.currentLocalDescription) {
-      const answer = await this.#connection.createAnswer();
-      await this.#connection.setLocalDescription(answer);
-      return this.#connection.localDescription;
-    } else {
-      return null;
-    }
+    const answer = await this.#connection.createAnswer();
+    await this.#connection.setLocalDescription(answer);
+    return this.#connection.localDescription;
+  }
+
+  async answerFeedback(answer) {
+    await this.#connection.setRemoteDescription(answer);
   }
 
   addTrack(track, ...streams) {

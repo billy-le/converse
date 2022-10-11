@@ -22,11 +22,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   emitter.on("stream:remove-track", (data) => {
-    const { trackId } = data;
-
     peerConnections.forEach((peer) => {
       const senders = peer.getSenders();
-      const sender = senders.find((sender) => sender.track?.id === trackId);
+      const sender = senders.find((sender) => sender.track?.id === data.trackId);
       if (sender) {
         peer.removeTrack(sender);
       }
@@ -34,16 +32,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   emitter.on("stream:add-screen-cast", (data) => {
-    const { track, screenCast } = data;
-
     peerConnections.forEach((peer) => {
-      peer.addTrack(track, screenCast);
+      peer.addTrack(data.track, data.screenCast);
     });
   });
 
   emitter.on("peer:negotiation", (data) => {
-    const { target } = data;
-    const peer = peerConnections.get(target);
+    const peer = peerConnections.get(data.target);
     if (peer) {
       peer.call().then((offer) => {
         socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
@@ -222,7 +217,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           if (streamers.includes(USER_ID) && USER_ID === data.target) {
             const peer = peerConnections.get(data.userId);
             if (peer) {
-              await peer.answer(data.answer);
+              await peer.answerFeedback(data.answer);
             }
           }
           break;
