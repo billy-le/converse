@@ -3,9 +3,9 @@ import { stunServers } from "./stun-servers.js";
 export class Peer {
   #connection;
   #target;
-  #onIceCandidate;
+  #emitter;
 
-  constructor({ target, onIceCandidate }) {
+  constructor({ target, emitter }) {
     this.#connection = new RTCPeerConnection({
       iceServers: [
         {
@@ -14,13 +14,13 @@ export class Peer {
       ],
     });
     this.#target = target;
-    this.#onIceCandidate = onIceCandidate;
+    this.#emitter = emitter;
 
     this.#connection.addEventListener("connectionstatechange", (event) => {});
 
     this.#connection.addEventListener("icecandidate", (event) => {
       if (event.candidate) {
-        this.#onIceCandidate({ candidate: event.candidate });
+        this.#emitter.emit("peer:ice-candidate", { candidate: event.candidate, target: this.#target });
       }
     });
 
@@ -32,13 +32,7 @@ export class Peer {
 
     this.#connection.addEventListener("negotiationneeded", async (event) => {
       if (event.target.localDescription) {
-        const offer = await this.call();
-        const event = new CustomEvent("negotiation:offer", {
-          detail: {
-            offer,
-          },
-        });
-        window.dispatchEvent(event);
+        this.#emitter.emit("peer:negotiation", { target: this.#target });
       }
     });
 
@@ -46,32 +40,23 @@ export class Peer {
 
     this.#connection.addEventListener("track", (event) => {
       const remoteStream = new MediaStream();
+
       event.streams.forEach((stream) => {
         stream.getTracks().forEach((track) => {
           remoteStream.addTrack(track);
           if (track.kind.includes("video")) {
-            const event = new CustomEvent("stream:add-video", {
-              detail: {
-                track,
-                target: this.#target,
-                remoteStream,
-              },
+            this.#emitter.emit("stream:add-video", {
+              track,
+              target: this.#target,
+              remoteStream,
             });
-
-            window.dispatchEvent(event);
           }
         });
 
         stream.addEventListener("removetrack", (event) => {
           remoteStream.getTracks().forEach((track) => {
             if (track.id === event.track.id) {
-              const event = new CustomEvent("stream:remove-video", {
-                detail: {
-                  track,
-                },
-              });
-
-              window.dispatchEvent(event);
+              this.#emitter.emit("stream:remove-video", { track });
             }
           });
         });
@@ -86,20 +71,20 @@ export class Peer {
     return this.#connection.localDescription;
   }
 
-  async answer(sdp) {
-    await this.#connection.setRemoteDescription(sdp);
+  async answer(offer) {
+    await this.#connection.setRemoteDescription(offer);
 
-    if (!this.#connection.currentLocalDescription) {
-      const answer = await this.#connection.createAnswer();
-      await this.#connection.setLocalDescription(answer);
-      return this.#connection.localDescription;
-    } else {
-      return null;
-    }
+    const answer = await this.#connection.createAnswer();
+    await this.#connection.setLocalDescription(answer);
+    return this.#connection.localDescription;
+  }
+
+  async answerFeedback(answer) {
+    await this.#connection.setRemoteDescription(answer);
   }
 
   addTrack(track, ...streams) {
-      this.#connection.addTrack(track, ...streams);
+    this.#connection.addTrack(track, ...streams);
   }
 
   removeTrack(track) {

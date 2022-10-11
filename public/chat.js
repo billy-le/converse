@@ -2,7 +2,9 @@ import dateFnsFormat from "https://cdn.jsdelivr.net/npm/date-fns@2.29.2/esm/form
 
 const MAX_STREAMERS = 4;
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+  const emitter = await import("./emitter.js").then(({ emitter }) => emitter);
+
   const [form, message, messages, buttonCopyLink, startStreamButton, wrapContainer, chatControls] = [
     "form",
     "message-input",
@@ -13,7 +15,8 @@ window.addEventListener("DOMContentLoaded", () => {
     "chat-controls",
   ].map((id) => document.querySelector(`#${id}`));
 
-  function toggleStreamButtonVisibility({ detail: { streamers, isStreaming } }) {
+  function toggleStreamButtonVisibility(data = {}) {
+    const { streamers, isStreaming } = data;
     if (startStreamButton) {
       if (!isStreaming) {
         switch (true) {
@@ -41,7 +44,7 @@ window.addEventListener("DOMContentLoaded", () => {
     return span.textContent;
   }
 
-  function createMessage({ detail: { msg, userId, isCurrentUser } }) {
+  function createMessage({ msg, userId, isCurrentUser }) {
     const li = document.createElement("li");
 
     const chatMessageContainer = document.createElement("div");
@@ -95,20 +98,16 @@ window.addEventListener("DOMContentLoaded", () => {
     async function handleStartStream() {
       try {
         await import("./stream.js").then(() => {
-          window.dispatchEvent(
-            new CustomEvent("stream:start", {
-              detail: {
-                handleSuccess() {
-                  if (wrapContainer) {
-                    wrapContainer.classList.add("stream-open");
-                  }
+          emitter.emit("stream:start", {
+            handleSuccess() {
+              if (wrapContainer) {
+                wrapContainer.classList.add("stream-open");
+              }
 
-                  window.dispatchEvent(new CustomEvent("stream:join"));
-                  startStreamButton.remove();
-                },
-              },
-            })
-          );
+              emitter.emit("stream:join");
+              startStreamButton.remove();
+            },
+          });
         });
       } catch (err) {
         console.log(err);
@@ -131,16 +130,12 @@ window.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       if (message) {
         if (message.value) {
-          window.dispatchEvent(
-            new CustomEvent("message:send", {
-              detail: {
-                message: message.value,
-                clear() {
-                  message.value = "";
-                },
-              },
-            })
-          );
+          emitter.emit("message:send", {
+            message: message.value,
+            clear() {
+              message.value = "";
+            },
+          });
         }
 
         message.focus();
@@ -148,7 +143,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  window.addEventListener("message:receive", createMessage);
-  window.addEventListener("message:streamers", toggleStreamButtonVisibility);
-  window.addEventListener("stream:stop", toggleStreamButtonVisibility);
+  emitter.on("message:receive", createMessage);
+  emitter.on("message:streamers", toggleStreamButtonVisibility);
+  emitter.on("stream:stop", toggleStreamButtonVisibility);
 });
