@@ -110,11 +110,8 @@ io.on("connection", (socket) => {
       }
       case "join-room": {
         socket.join(roomId);
-        io.to(roomId).emit(ROOM_MESSAGE, data);
-        if (roomStreamers[roomId]) {
-          const streamers = Array.from(roomStreamers[roomId]);
-          io.to(roomId).emit(ROOM_MESSAGE, { type: "current-streamers", userId: data.userId, streamers });
-        }
+        const streamers = Array.from(roomStreamers?.[roomId] ?? []);
+        io.to(roomId).emit(ROOM_MESSAGE, { ...data, streamers });
         sendCurrentRooms(io);
         break;
       }

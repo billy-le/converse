@@ -1,6 +1,6 @@
 import dateFnsFormat from "https://cdn.jsdelivr.net/npm/date-fns@2.29.2/esm/format/index.js";
 
-const MAX_STREAMERS = 4;
+const MAX_STREAMERS = 3;
 
 window.addEventListener("DOMContentLoaded", async () => {
   const emitter = await import("./emitter.js").then(({ emitter }) => emitter);
@@ -24,9 +24,11 @@ window.addEventListener("DOMContentLoaded", async () => {
             startStreamButton.remove();
             break;
           case streamers?.length && streamers.length < MAX_STREAMERS:
+            startStreamButton.style.display = "block";
             startStreamButton.innerHTML = `Join Stream<i class="fa-solid fa-arrow-right-to-bracket"></i>`;
             break;
           default:
+            startStreamButton.style.display = "block";
             startStreamButton.innerHTML = `<i class="fa-solid fa-video"></i>Start Stream`;
             if (!chatControls.contains(startStreamButton)) {
               chatControls.appendChild(startStreamButton);
@@ -96,6 +98,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   if (startStreamButton) {
     async function handleStartStream() {
+      startStreamButton.setAttribute("disabled", "true");
       try {
         await import("./stream.js").then(() => {
           emitter.emit("stream:start", {
@@ -105,11 +108,13 @@ window.addEventListener("DOMContentLoaded", async () => {
               }
 
               emitter.emit("stream:join");
+              startStreamButton.removeAttribute("disabled");
               startStreamButton.remove();
             },
           });
         });
       } catch (err) {
+        startStreamButton.removeAttribute("disabled");
         console.log(err);
       }
     }
