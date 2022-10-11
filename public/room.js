@@ -41,7 +41,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const peer = peerConnections.get(data.target);
     if (peer) {
       peer.call().then((offer) => {
-        socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
+        socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer, target: data.target });
       });
     }
   });
@@ -79,20 +79,19 @@ window.addEventListener("DOMContentLoaded", async () => {
                 ? `Welcome to Room "${ROOM_ID}". You are designated as User ${USER_ID}.`
                 : `User ${data.userId} has joined.`,
           });
-          break;
-        }
-        case "current-streamers": {
-          const { streamers } = data;
-          if (streamers?.length && data.userId === USER_ID) {
-            const users = streamers.map((userId) => `User ${userId}`).join(", ");
+
+          if (data.streamers?.length) {
+            const users = data.streamers.map((userId) => `User ${userId}`)?.join(", ");
             dispatchMessageReceive({
-              msg: `${users} ${streamers.length > 1 ? "are" : "is"} currently streaming.`,
-            });
-            dispatchMessageStreamers({
-              streamers,
-              isStreaming: streamers.includes(USER_ID),
+              msg: `${users} ${data.streamers.length > 1 ? "are" : "is"} currently streaming.`,
             });
           }
+
+          dispatchMessageStreamers({
+            streamers: data.streamers,
+            isStreaming: data.streamers?.includes(USER_ID),
+          });
+
           break;
         }
         case "join-stream": {
@@ -121,7 +120,13 @@ window.addEventListener("DOMContentLoaded", async () => {
 
             await peer.call().then((offer) => {
               if (offer) {
-                socket.emit(ROOM_MESSAGE, { type: "offer-sdp", roomId: ROOM_ID, userId: USER_ID, offer });
+                socket.emit(ROOM_MESSAGE, {
+                  type: "offer-sdp",
+                  roomId: ROOM_ID,
+                  userId: USER_ID,
+                  offer,
+                  target: data.userId,
+                });
               }
             });
           }
@@ -178,8 +183,8 @@ window.addEventListener("DOMContentLoaded", async () => {
           break;
         }
         case "offer-sdp": {
-          const { streamers } = data;
-          if (streamers.includes(USER_ID)) {
+          const { streamers, target } = data;
+          if (streamers.includes(USER_ID) && target === USER_ID) {
             let peer = peerConnections.get(data.userId);
             if (!peer) {
               peer = await import("./peer.js").then(

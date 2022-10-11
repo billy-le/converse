@@ -304,6 +304,11 @@ video {
   width: 100%;
 }
 
+#start-stream[disabled="true"] {
+  opacity: .5;
+  pointer-events: none;
+}
+
 #start-stream:active,
 #copy-link:active {
   background-color: var(--blue-gray);

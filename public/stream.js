@@ -23,6 +23,8 @@ const [
 
 if (startScreenCastButton) {
   startScreenCastButton.addEventListener("pointerdown", async () => {
+    startScreenCastButton.setAttribute("disabled", "true");
+
     if (startScreenCastButton.classList.contains("active")) {
       localStreamVideo.srcObject.getTracks().forEach((track) => {
         track.stop();
@@ -30,8 +32,10 @@ if (startScreenCastButton) {
       startScreenCastButton.classList.remove("active");
       localStreamVideo.srcObject = stream;
       emitter.emit("stream:remove-track", { trackId: screenCastId });
+      startScreenCastButton.removeAttribute("disabled");
     } else {
       const screenCast = await import("./screencast.js").then(({ getScreenCastMedia }) => getScreenCastMedia());
+      startScreenCastButton.removeAttribute("disabled");
       startScreenCastButton.classList.add("active");
       if (screenCast) {
         if (localStreamVideo) {
@@ -266,6 +270,9 @@ emitter.on("stream:add-video", (data) => {
       if (remoteStreamsContainer) {
         remoteStreamsContainer.appendChild(remoteStreamVideo);
         remoteStreamsContainer.classList.add("active");
+        const childrenCount = remoteStreamsContainer.childElementCount;
+        remoteStreamsContainer.style.gridTemplateColumns = childrenCount > 1 ? "repeat(2, 1fr)" : "auto";
+        remoteStreamsContainer.style.gridTemplateRows = Math.ceil(childrenCount / 2);
       }
 
       if (localStreamVideo) {
