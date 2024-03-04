@@ -21,7 +21,7 @@
   color: var(--pewter);
   padding: 4px;
   border-radius: 4px;
-  font-size: 0.5rem;
+  font-size: 1rem;
   display: none;
 }
 
@@ -35,7 +35,7 @@
 }
 
 #media-devices select {
-  font-size: 0.5rem;
+  font-size: 1rem;
 }
 
 video {
@@ -215,7 +215,9 @@ video {
   display: none;
 }
 
-#controls button.active :is(.fa-microphone-lines-slash, .fa-video-slash, .fa-slash) {
+#controls
+  button.active
+  :is(.fa-microphone-lines-slash, .fa-video-slash, .fa-slash) {
   display: block;
 }
 
@@ -305,7 +307,7 @@ video {
 }
 
 #start-stream[disabled="true"] {
-  opacity: .5;
+  opacity: 0.5;
   pointer-events: none;
 }
 
