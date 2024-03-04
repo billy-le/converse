@@ -55,7 +55,7 @@ h1 {
   transform: translate(-50%, -4rem);
   border: 2px solid var(--pewter);
   border-radius: 4px;
-  height: 2rem;
+  height: 2.5rem;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
   font-size: 1rem;
 }
@@ -80,6 +80,7 @@ h1 {
   overflow-y: auto;
   position: relative;
   flex-grow: 1;
+  min-height: 300px;
 }
 
 #rooms-container h3 {
