@@ -1,5 +1,2 @@
 User-agent: *
-Disallow: /room
-
-User-agent: *
-Allow: /
+Disallow: /
